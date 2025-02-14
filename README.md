@@ -1,8 +1,8 @@
 # FIN-RPG: 게임화 요소를 활용한 개인 자산 관리 시스템
 
-[![CI](https://github.com/aske/go_fi_chart/actions/workflows/ci.yml/badge.svg)](https://github.com/aske/go_fi_chart/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/aske/go_fi_chart/branch/main/graph/badge.svg)](https://codecov.io/gh/aske/go_fi_chart)
-[![Go Report Card](https://goreportcard.com/badge/github.com/aske/go_fi_chart)](https://goreportcard.com/report/github.com/aske/go_fi_chart)
+[![CI](https://github.com/kimjooyoon/go_fi_chart/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kimjooyoon/go_fi_chart/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/kimjooyoon/go_fi_chart/branch/main/graph/badge.svg)](https://codecov.io/gh/kimjooyoon/go_fi_chart)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kimjooyoon/go_fi_chart)](https://goreportcard.com/report/github.com/kimjooyoon/go_fi_chart)
 
 FIN-RPG는 개인 자산 관리의 진입 장벽을 낮추고 지속적인 관리 동기를 부여하기 위해 게임화(Gamification) 요소를 도입한 시스템입니다. 복잡한 재무 관리를 재미있고 이해하기 쉽게 만들어, 사용자가 자연스럽게 올바른 자산 관리 습관을 기를 수 있도록 돕습니다.
 
