@@ -97,7 +97,6 @@ func (r *MemoryRepository[T]) FindOne(_ context.Context, _ domain.SearchCriteria
 
 // WithTransaction 트랜잭션을 실행합니다.
 func (r *MemoryRepository[T]) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
-	// 인메모리 저장소는 트랜잭션을 지원하지 않으므로, 함수를 바로 실행합니다.
 	return fn(ctx)
 }
 

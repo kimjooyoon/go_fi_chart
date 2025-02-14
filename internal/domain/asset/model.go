@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// Asset 자산을 나타내는 루트 엔티티
 type Asset struct {
 	ID           string
 	UserID       string
@@ -16,7 +15,6 @@ type Asset struct {
 	Transactions []Transaction
 }
 
-// Entity 인터페이스 구현
 func (a *Asset) GetID() string {
 	return a.ID
 }
@@ -39,7 +37,6 @@ const (
 	Crypto     Type = "CRYPTO"
 )
 
-// Transaction 거래 내역
 type Transaction struct {
 	ID          string
 	AssetID     string
@@ -51,7 +48,6 @@ type Transaction struct {
 	CreatedAt   time.Time
 }
 
-// Entity 인터페이스 구현
 func (t *Transaction) GetID() string {
 	return t.ID
 }
@@ -61,10 +57,9 @@ func (t *Transaction) GetCreatedAt() time.Time {
 }
 
 func (t *Transaction) GetUpdatedAt() time.Time {
-	return t.Date // Transaction은 수정되지 않으므로 Date를 UpdatedAt으로 사용
+	return t.Date
 }
 
-// TransactionType 거래 유형
 type TransactionType string
 
 const (
@@ -73,7 +68,6 @@ const (
 	Transfer TransactionType = "TRANSFER"
 )
 
-// Portfolio 포트폴리오 구성
 type Portfolio struct {
 	ID        string
 	UserID    string
@@ -82,7 +76,6 @@ type Portfolio struct {
 	UpdatedAt time.Time
 }
 
-// Entity 인터페이스 구현
 func (p *Portfolio) GetID() string {
 	return p.ID
 }
@@ -101,7 +94,6 @@ type PortfolioAsset struct {
 	Weight  float64
 }
 
-// NewAsset 새로운 Asset 생성
 func NewAsset(userID string, assetType Type, name string, amount float64) *Asset {
 	now := time.Now()
 	return &Asset{
@@ -115,7 +107,6 @@ func NewAsset(userID string, assetType Type, name string, amount float64) *Asset
 	}
 }
 
-// NewTransaction 새로운 Transaction 생성
 func NewTransaction(assetID string, transactionType TransactionType, amount float64, category string, description string) *Transaction {
 	now := time.Now()
 	return &Transaction{
@@ -130,7 +121,6 @@ func NewTransaction(assetID string, transactionType TransactionType, amount floa
 	}
 }
 
-// NewPortfolio 새로운 Portfolio 생성
 func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio {
 	now := time.Now()
 	return &Portfolio{
