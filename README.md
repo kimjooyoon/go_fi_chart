@@ -69,18 +69,17 @@ FIN-RPG는 개인 자산 관리의 진입 장벽을 낮추고 지속적인 관�
 
 1. 이 저장소를 클론합니다.
    ```bash
-   git clone https://github.com/username/repo-name.git
+   git clone https://github.com/kimjooyoon/go_fi_chart.git
    ```
 2. 필요한 패키지를 설치합니다.
    ```bash
-   cd repo-name
-   # Flutter 설치
-   flutter pub get
+   cd go_fi_chart
+   go mod download
    ```
 3. 서버를 시작합니다.
    ```bash
    # Go 서버 실행
-   go run main.go
+   go run cmd/server/main.go
    ```
 
 ## 게임 시작하기
