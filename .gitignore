@@ -1,0 +1,31 @@
+# Go 관련
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# IDE 관련
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 빌드 결과물
+bin/
+dist/
+
+# 환경 설정
+.env
+.env.local
+.env.*.local
+
+# 로그
+*.log
+
+# 시스템 파일
+.DS_Store
+Thumbs.db 
