@@ -1,0 +1,807 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/aske/go_fi_chart/cmd/server/main.go (0.0%)</option>
+				
+				<option value="file1">github.com/aske/go_fi_chart/internal/domain/asset/id_generator.go (100.0%)</option>
+				
+				<option value="file2">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go (76.0%)</option>
+				
+				<option value="file3">github.com/aske/go_fi_chart/internal/domain/asset/model.go (20.0%)</option>
+				
+				<option value="file4">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go (100.0%)</option>
+				
+				<option value="file5">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "log"
+        "net/http"
+        "time"
+)
+
+func main() <span class="cov0" title="0">{
+        log.Println("FIN-RPG 서버 시작 중...")
+
+        // TODO: 의존성 주입 설정
+        // TODO: 라우터 설정
+        // TODO: 미들웨어 설정
+        // TODO: 데이터베이스 연결
+
+        srv := &amp;http.Server{
+                Addr:              ":8080",
+                ReadTimeout:       5 * time.Second,
+                WriteTimeout:      10 * time.Second,
+                IdleTimeout:       120 * time.Second,
+                ReadHeaderTimeout: 2 * time.Second,
+        }
+
+        log.Println("서버가 시작되었습니다. :8080 포트에서 대기 중...")
+        if err := srv.ListenAndServe(); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("서버 시작 실패: %v", err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package asset
+
+import (
+        "github.com/google/uuid"
+)
+
+// generateID는 UUID v4를 사용하여 고유한 ID를 생성합니다.
+// UUID v4는 랜덤하게 생성되며, 충돌 가능성이 극히 낮습니다.
+// 또한 내부적으로 동시성을 지원하므로 별도의 동기화가 필요하지 않습니다.
+func generateID() string <span class="cov10" title="2002">{
+        return uuid.New().String()
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package asset
+
+import (
+        "context"
+        "fmt"
+        "sync"
+        "time"
+
+        "github.com/aske/go_fi_chart/internal/domain"
+)
+
+// MemoryRepository 인메모리 저장소 구현체
+type MemoryRepository[T domain.Entity] struct {
+        data  map[string]T
+        mutex sync.RWMutex
+}
+
+// NewMemoryRepository 새로운 인메모리 저장소를 생성합니다.
+func NewMemoryRepository[T domain.Entity]() *MemoryRepository[T] <span class="cov8" title="12">{
+        return &amp;MemoryRepository[T]{
+                data: make(map[string]T),
+        }
+}</span>
+
+// Save 엔티티를 저장합니다.
+func (r *MemoryRepository[T]) Save(_ context.Context, entity T) error <span class="cov10" title="20">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.data[entity.GetID()]; exists </span><span class="cov0" title="0">{
+                return domain.NewRepositoryError("Save", fmt.Errorf("entity with ID %s already exists", entity.GetID()))
+        }</span>
+
+        <span class="cov10" title="20">r.data[entity.GetID()] = entity
+        return nil</span>
+}
+
+// FindByID ID로 엔티티를 조회합니다.
+func (r *MemoryRepository[T]) FindByID(_ context.Context, id string) (T, error) <span class="cov6" title="7">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        if entity, exists := r.data[id]; exists </span><span class="cov6" title="6">{
+                return entity, nil
+        }</span>
+
+        <span class="cov1" title="1">var zero T
+        return zero, domain.NewRepositoryError("FindByID", fmt.Errorf("entity with ID %s not found", id))</span>
+}
+
+// Update 엔티티를 업데이트합니다.
+func (r *MemoryRepository[T]) Update(_ context.Context, entity T) error <span class="cov1" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.data[entity.GetID()]; !exists </span><span class="cov0" title="0">{
+                return domain.NewRepositoryError("Update", fmt.Errorf("entity with ID %s not found", entity.GetID()))
+        }</span>
+
+        <span class="cov1" title="1">r.data[entity.GetID()] = entity
+        return nil</span>
+}
+
+// Delete ID로 엔티티를 삭제합니다.
+func (r *MemoryRepository[T]) Delete(_ context.Context, id string) error <span class="cov1" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.data[id]; !exists </span><span class="cov0" title="0">{
+                return domain.NewRepositoryError("Delete", fmt.Errorf("entity with ID %s not found", id))
+        }</span>
+
+        <span class="cov1" title="1">delete(r.data, id)
+        return nil</span>
+}
+
+// FindAll 검색 조건에 맞는 모든 엔티티를 조회합니다.
+func (r *MemoryRepository[T]) FindAll(_ context.Context, _ domain.SearchCriteria) ([]T, error) <span class="cov0" title="0">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var result []T
+        for _, entity := range r.data </span><span class="cov0" title="0">{
+                result = append(result, entity)
+        }</span>
+        <span class="cov0" title="0">return result, nil</span>
+}
+
+// FindOne 검색 조건에 맞는 하나의 엔티티를 조회합니다.
+func (r *MemoryRepository[T]) FindOne(_ context.Context, _ domain.SearchCriteria) (T, error) <span class="cov0" title="0">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var zero T
+        return zero, domain.NewRepositoryError("FindOne", fmt.Errorf("not implemented"))
+}</span>
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryRepository[T]) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error <span class="cov0" title="0">{
+        // 인메모리 저장소는 트랜잭션을 지원하지 않으므로, 함수를 바로 실행합니다.
+        return fn(ctx)
+}</span>
+
+// MemoryAssetRepository Asset 도메인의 인메모리 저장소
+type MemoryAssetRepository struct {
+        *MemoryRepository[*Asset]
+}
+
+// NewMemoryAssetRepository 새로운 Asset 인메모리 저장소를 생성합니다.
+func NewMemoryAssetRepository() *MemoryAssetRepository <span class="cov6" title="6">{
+        return &amp;MemoryAssetRepository{
+                MemoryRepository: NewMemoryRepository[*Asset](),
+        }
+}</span>
+
+// FindByUserID 사용자 ID로 Asset 목록을 조회합니다.
+func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) <span class="cov1" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var result []*Asset
+        for _, asset := range r.data </span><span class="cov4" title="3">{
+                if asset.UserID == userID </span><span class="cov4" title="3">{
+                        result = append(result, asset)
+                }</span>
+        }
+        <span class="cov1" title="1">return result, nil</span>
+}
+
+// FindByType Asset 유형으로 Asset 목록을 조회합니다.
+func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([]*Asset, error) <span class="cov1" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var result []*Asset
+        for _, asset := range r.data </span><span class="cov4" title="3">{
+                if asset.Type == assetType </span><span class="cov1" title="1">{
+                        result = append(result, asset)
+                }</span>
+        }
+        <span class="cov1" title="1">return result, nil</span>
+}
+
+// UpdateAmount Asset의 금액을 업데이트합니다.
+func (r *MemoryAssetRepository) UpdateAmount(ctx context.Context, id string, amount float64) error <span class="cov1" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        asset, exists := r.data[id]
+        if !exists </span><span class="cov0" title="0">{
+                return domain.NewRepositoryError("UpdateAmount", fmt.Errorf("asset with ID %s not found", id))
+        }</span>
+
+        <span class="cov1" title="1">asset.Amount = amount
+        asset.UpdatedAt = time.Now()
+        r.data[id] = asset
+        return nil</span>
+}
+
+// MemoryTransactionRepository Transaction 도메인의 인메모리 저장소
+type MemoryTransactionRepository struct {
+        *MemoryRepository[*Transaction]
+}
+
+// NewMemoryTransactionRepository 새로운 Transaction 인메모리 저장소를 생성합니다.
+func NewMemoryTransactionRepository() *MemoryTransactionRepository <span class="cov4" title="3">{
+        return &amp;MemoryTransactionRepository{
+                MemoryRepository: NewMemoryRepository[*Transaction](),
+        }
+}</span>
+
+// FindByAssetID 자산 ID로 Transaction 목록을 조회합니다.
+func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID string) ([]*Transaction, error) <span class="cov0" title="0">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var result []*Transaction
+        for _, tx := range r.data </span><span class="cov0" title="0">{
+                if tx.AssetID == assetID </span><span class="cov0" title="0">{
+                        result = append(result, tx)
+                }</span>
+        }
+        <span class="cov0" title="0">return result, nil</span>
+}
+
+// FindByDateRange 날짜 범위로 Transaction 목록을 조회합니다.
+func (r *MemoryTransactionRepository) FindByDateRange(ctx context.Context, start, end time.Time) ([]*Transaction, error) <span class="cov1" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var result []*Transaction
+        for _, tx := range r.data </span><span class="cov4" title="3">{
+                if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp; (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span class="cov4" title="3">{
+                        result = append(result, tx)
+                }</span>
+        }
+        <span class="cov1" title="1">return result, nil</span>
+}
+
+// GetTotalAmount 자산 ID에 대한 총 거래 금액을 계산합니다.
+func (r *MemoryTransactionRepository) GetTotalAmount(ctx context.Context, assetID string) (float64, error) <span class="cov1" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var total float64
+        for _, tx := range r.data </span><span class="cov4" title="3">{
+                if tx.AssetID == assetID </span><span class="cov3" title="2">{
+                        switch tx.Type </span>{
+                        case Income:<span class="cov1" title="1">
+                                total += tx.Amount</span>
+                        case Expense:<span class="cov1" title="1">
+                                total -= tx.Amount</span>
+                        case Transfer:<span class="cov0" title="0"></span>
+                                // Transfer는 별도 처리 필요
+                        }
+                }
+        }
+        <span class="cov1" title="1">return total, nil</span>
+}
+
+// MemoryPortfolioRepository Portfolio 도메인의 인메모리 저장소
+type MemoryPortfolioRepository struct {
+        *MemoryRepository[*Portfolio]
+}
+
+// NewMemoryPortfolioRepository 새로운 Portfolio 인메모리 저장소를 생성합니다.
+func NewMemoryPortfolioRepository() *MemoryPortfolioRepository <span class="cov4" title="3">{
+        return &amp;MemoryPortfolioRepository{
+                MemoryRepository: NewMemoryRepository[*Portfolio](),
+        }
+}</span>
+
+// FindByUserID 사용자 ID로 Portfolio를 조회합니다.
+func (r *MemoryPortfolioRepository) FindByUserID(ctx context.Context, userID string) (*Portfolio, error) <span class="cov1" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        for _, portfolio := range r.data </span><span class="cov1" title="1">{
+                if portfolio.UserID == userID </span><span class="cov1" title="1">{
+                        return portfolio, nil
+                }</span>
+        }
+        <span class="cov0" title="0">return nil, domain.NewRepositoryError("FindByUserID", fmt.Errorf("portfolio for user %s not found", userID))</span>
+}
+
+// UpdateAssets Portfolio의 자산 구성을 업데이트합니다.
+func (r *MemoryPortfolioRepository) UpdateAssets(ctx context.Context, id string, assets []PortfolioAsset) error <span class="cov1" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        portfolio, exists := r.data[id]
+        if !exists </span><span class="cov0" title="0">{
+                return domain.NewRepositoryError("UpdateAssets", fmt.Errorf("portfolio with ID %s not found", id))
+        }</span>
+
+        <span class="cov1" title="1">portfolio.Assets = assets
+        portfolio.UpdatedAt = time.Now()
+        r.data[id] = portfolio
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package asset
+
+import (
+        "time"
+)
+
+// Asset 자산을 나타내는 루트 엔티티
+type Asset struct {
+        ID           string
+        UserID       string
+        Type         Type
+        Name         string
+        Amount       float64
+        CreatedAt    time.Time
+        UpdatedAt    time.Time
+        Transactions []Transaction
+}
+
+// Entity 인터페이스 구현
+func (a *Asset) GetID() string <span class="cov10" title="22">{
+        return a.ID
+}</span>
+
+func (a *Asset) GetCreatedAt() time.Time <span class="cov0" title="0">{
+        return a.CreatedAt
+}</span>
+
+func (a *Asset) GetUpdatedAt() time.Time <span class="cov0" title="0">{
+        return a.UpdatedAt
+}</span>
+
+// Type 자산 유형
+type Type string
+
+const (
+        Cash       Type = "CASH"
+        Stock      Type = "STOCK"
+        Bond       Type = "BOND"
+        RealEstate Type = "REAL_ESTATE"
+        Crypto     Type = "CRYPTO"
+)
+
+// Transaction 거래 내역
+type Transaction struct {
+        ID          string
+        AssetID     string
+        Type        TransactionType
+        Amount      float64
+        Category    string
+        Description string
+        Date        time.Time
+        CreatedAt   time.Time
+}
+
+// Entity 인터페이스 구현
+func (t *Transaction) GetID() string <span class="cov8" title="14">{
+        return t.ID
+}</span>
+
+func (t *Transaction) GetCreatedAt() time.Time <span class="cov0" title="0">{
+        return t.CreatedAt
+}</span>
+
+func (t *Transaction) GetUpdatedAt() time.Time <span class="cov0" title="0">{
+        return t.Date // Transaction은 수정되지 않으므로 Date를 UpdatedAt으로 사용
+}</span>
+
+// TransactionType 거래 유형
+type TransactionType string
+
+const (
+        Income   TransactionType = "INCOME"
+        Expense  TransactionType = "EXPENSE"
+        Transfer TransactionType = "TRANSFER"
+)
+
+// Portfolio 포트폴리오 구성
+type Portfolio struct {
+        ID        string
+        UserID    string
+        Assets    []PortfolioAsset
+        CreatedAt time.Time
+        UpdatedAt time.Time
+}
+
+// Entity 인터페이스 구현
+func (p *Portfolio) GetID() string <span class="cov6" title="6">{
+        return p.ID
+}</span>
+
+func (p *Portfolio) GetCreatedAt() time.Time <span class="cov0" title="0">{
+        return p.CreatedAt
+}</span>
+
+func (p *Portfolio) GetUpdatedAt() time.Time <span class="cov0" title="0">{
+        return p.UpdatedAt
+}</span>
+
+// PortfolioAsset 포트폴리오 내 자산
+type PortfolioAsset struct {
+        AssetID string
+        Weight  float64
+}
+
+// NewAsset 새로운 Asset 생성
+func NewAsset(userID string, assetType Type, name string, amount float64) *Asset <span class="cov0" title="0">{
+        now := time.Now()
+        return &amp;Asset{
+                ID:        generateID(),
+                UserID:    userID,
+                Type:      assetType,
+                Name:      name,
+                Amount:    amount,
+                CreatedAt: now,
+                UpdatedAt: now,
+        }
+}</span>
+
+// NewTransaction 새로운 Transaction 생성
+func NewTransaction(assetID string, transactionType TransactionType, amount float64, category string, description string) *Transaction <span class="cov0" title="0">{
+        now := time.Now()
+        return &amp;Transaction{
+                ID:          generateID(),
+                AssetID:     assetID,
+                Type:        transactionType,
+                Amount:      amount,
+                Category:    category,
+                Description: description,
+                Date:        now,
+                CreatedAt:   now,
+        }
+}</span>
+
+// NewPortfolio 새로운 Portfolio 생성
+func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio <span class="cov0" title="0">{
+        now := time.Now()
+        return &amp;Portfolio{
+                ID:        generateID(),
+                UserID:    userID,
+                Assets:    assets,
+                CreatedAt: now,
+                UpdatedAt: now,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package asset
+
+import (
+        "time"
+)
+
+// TestFixture 테스트에 사용할 데이터 세트
+type TestFixture struct {
+        Assets       []*Asset
+        Transactions []*Transaction
+        Portfolios   []*Portfolio
+}
+
+// NewTestFixture 새로운 테스트 픽스처를 생성합니다.
+func NewTestFixture() *TestFixture <span class="cov10" title="20">{
+        now := time.Now()
+        userID := "test-user-1"
+
+        // 자산 데이터 생성
+        assets := []*Asset{
+                {
+                        ID:        "asset-1",
+                        UserID:    userID,
+                        Type:      Cash,
+                        Name:      "현금 자산",
+                        Amount:    1000000,
+                        CreatedAt: now,
+                        UpdatedAt: now,
+                },
+                {
+                        ID:        "asset-2",
+                        UserID:    userID,
+                        Type:      Stock,
+                        Name:      "주식 투자",
+                        Amount:    5000000,
+                        CreatedAt: now,
+                        UpdatedAt: now,
+                },
+                {
+                        ID:        "asset-3",
+                        UserID:    userID,
+                        Type:      Bond,
+                        Name:      "채권 투자",
+                        Amount:    3000000,
+                        CreatedAt: now,
+                        UpdatedAt: now,
+                },
+        }
+
+        // 거래 내역 데이터 생성
+        transactions := []*Transaction{
+                {
+                        ID:          "tx-1",
+                        AssetID:     "asset-1",
+                        Type:        Income,
+                        Amount:      500000,
+                        Category:    "급여",
+                        Description: "3월 급여",
+                        Date:        now,
+                        CreatedAt:   now,
+                },
+                {
+                        ID:          "tx-2",
+                        AssetID:     "asset-1",
+                        Type:        Expense,
+                        Amount:      100000,
+                        Category:    "식비",
+                        Description: "3월 식비",
+                        Date:        now,
+                        CreatedAt:   now,
+                },
+                {
+                        ID:          "tx-3",
+                        AssetID:     "asset-2",
+                        Type:        Transfer,
+                        Amount:      1000000,
+                        Category:    "투자",
+                        Description: "주식 매수",
+                        Date:        now,
+                        CreatedAt:   now,
+                },
+        }
+
+        // 포트폴리오 데이터 생성
+        portfolios := []*Portfolio{
+                {
+                        ID:     "portfolio-1",
+                        UserID: userID,
+                        Assets: []PortfolioAsset{
+                                {
+                                        AssetID: "asset-1",
+                                        Weight:  0.2, // 20%
+                                },
+                                {
+                                        AssetID: "asset-2",
+                                        Weight:  0.5, // 50%
+                                },
+                                {
+                                        AssetID: "asset-3",
+                                        Weight:  0.3, // 30%
+                                },
+                        },
+                        CreatedAt: now,
+                        UpdatedAt: now,
+                },
+        }
+
+        return &amp;TestFixture{
+                Assets:       assets,
+                Transactions: transactions,
+                Portfolios:   portfolios,
+        }
+}</span>
+
+// GetAssetByID 테스트 픽스처에서 ID로 Asset을 찾습니다.
+func (f *TestFixture) GetAssetByID(id string) *Asset <span class="cov3" title="2">{
+        for _, asset := range f.Assets </span><span class="cov5" title="4">{
+                if asset.ID == id </span><span class="cov1" title="1">{
+                        return asset
+                }</span>
+        }
+        <span class="cov1" title="1">return nil</span>
+}
+
+// GetTransactionByID 테스트 픽스처에서 ID로 Transaction을 찾습니다.
+func (f *TestFixture) GetTransactionByID(id string) *Transaction <span class="cov3" title="2">{
+        for _, tx := range f.Transactions </span><span class="cov5" title="4">{
+                if tx.ID == id </span><span class="cov1" title="1">{
+                        return tx
+                }</span>
+        }
+        <span class="cov1" title="1">return nil</span>
+}
+
+// GetPortfolioByID 테스트 픽스처에서 ID로 Portfolio를 찾습니다.
+func (f *TestFixture) GetPortfolioByID(id string) *Portfolio <span class="cov3" title="2">{
+        for _, portfolio := range f.Portfolios </span><span class="cov3" title="2">{
+                if portfolio.ID == id </span><span class="cov1" title="1">{
+                        return portfolio
+                }</span>
+        }
+        <span class="cov1" title="1">return nil</span>
+}
+
+// GetAssetsByUserID 테스트 픽스처에서 UserID로 Asset 목록을 찾습니다.
+func (f *TestFixture) GetAssetsByUserID(userID string) []*Asset <span class="cov3" title="2">{
+        var result []*Asset
+        for _, asset := range f.Assets </span><span class="cov6" title="6">{
+                if asset.UserID == userID </span><span class="cov4" title="3">{
+                        result = append(result, asset)
+                }</span>
+        }
+        <span class="cov3" title="2">return result</span>
+}
+
+// GetTransactionsByAssetID 테스트 픽스처에서 AssetID로 Transaction 목록을 찾습니다.
+func (f *TestFixture) GetTransactionsByAssetID(assetID string) []*Transaction <span class="cov3" title="2">{
+        var result []*Transaction
+        for _, tx := range f.Transactions </span><span class="cov6" title="6">{
+                if tx.AssetID == assetID </span><span class="cov3" title="2">{
+                        result = append(result, tx)
+                }</span>
+        }
+        <span class="cov3" title="2">return result</span>
+}
+
+// GetPortfolioByUserID 테스트 픽스처에서 UserID로 Portfolio를 찾습니다.
+func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class="cov3" title="2">{
+        for _, portfolio := range f.Portfolios </span><span class="cov3" title="2">{
+                if portfolio.UserID == userID </span><span class="cov1" title="1">{
+                        return portfolio
+                }</span>
+        }
+        <span class="cov1" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package domain
+
+import (
+        "context"
+        "time"
+)
+
+// Entity 모든 엔티티가 구현해야 하는 기본 인터페이스
+type Entity interface {
+        GetID() string
+        GetCreatedAt() time.Time
+        GetUpdatedAt() time.Time
+}
+
+// SearchCriteria 검색 조건 인터페이스
+type SearchCriteria interface {
+        ToQuery() (string, []interface{})
+}
+
+// Repository 기본 레포지토리 인터페이스
+type Repository[T Entity, ID comparable] interface {
+        // 기본 CRUD 작업
+        Save(ctx context.Context, entity T) error
+        FindByID(ctx context.Context, id ID) (T, error)
+        Update(ctx context.Context, entity T) error
+        Delete(ctx context.Context, id ID) error
+
+        // 검색 작업
+        FindAll(ctx context.Context, criteria SearchCriteria) ([]T, error)
+        FindOne(ctx context.Context, criteria SearchCriteria) (T, error)
+
+        // 트랜잭션 관리
+        WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
+// RepositoryError 레포지토리 관련 에러 타입
+type RepositoryError struct {
+        Op  string // 작업 종류 (예: Save, FindByID 등)
+        Err error  // 원본 에러
+}
+
+func (e *RepositoryError) Error() string <span class="cov0" title="0">{
+        if e.Err == nil </span><span class="cov0" title="0">{
+                return e.Op
+        }</span>
+        <span class="cov0" title="0">return e.Op + ": " + e.Err.Error()</span>
+}
+
+// NewRepositoryError 새로운 레포지토리 에러 생성
+func NewRepositoryError(op string, err error) error <span class="cov0" title="0">{
+        return &amp;RepositoryError{
+                Op:  op,
+                Err: err,
+        }
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

@@ -142,7 +142,7 @@ func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([
 }
 
 // UpdateAmount Asset의 금액을 업데이트합니다.
-func (r *MemoryAssetRepository) UpdateAmount(ctx context.Context, id string, amount float64) error {
+func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amount float64) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -170,7 +170,7 @@ func NewMemoryTransactionRepository() *MemoryTransactionRepository {
 }
 
 // FindByAssetID 자산 ID로 Transaction 목록을 조회합니다.
-func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID string) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID string) ([]*Transaction, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -184,7 +184,7 @@ func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID
 }
 
 // FindByDateRange 날짜 범위로 Transaction 목록을 조회합니다.
-func (r *MemoryTransactionRepository) FindByDateRange(ctx context.Context, start, end time.Time) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByDateRange(_ context.Context, start, end time.Time) ([]*Transaction, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -198,7 +198,7 @@ func (r *MemoryTransactionRepository) FindByDateRange(ctx context.Context, start
 }
 
 // GetTotalAmount 자산 ID에 대한 총 거래 금액을 계산합니다.
-func (r *MemoryTransactionRepository) GetTotalAmount(ctx context.Context, assetID string) (float64, error) {
+func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (float64, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -231,7 +231,7 @@ func NewMemoryPortfolioRepository() *MemoryPortfolioRepository {
 }
 
 // FindByUserID 사용자 ID로 Portfolio를 조회합니다.
-func (r *MemoryPortfolioRepository) FindByUserID(ctx context.Context, userID string) (*Portfolio, error) {
+func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID string) (*Portfolio, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -244,7 +244,7 @@ func (r *MemoryPortfolioRepository) FindByUserID(ctx context.Context, userID str
 }
 
 // UpdateAssets Portfolio의 자산 구성을 업데이트합니다.
-func (r *MemoryPortfolioRepository) UpdateAssets(ctx context.Context, id string, assets []PortfolioAsset) error {
+func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, assets []PortfolioAsset) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 

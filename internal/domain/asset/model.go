@@ -29,7 +29,6 @@ func (a *Asset) GetUpdatedAt() time.Time {
 	return a.UpdatedAt
 }
 
-// Type 자산 유형
 type Type string
 
 const (
