@@ -25,10 +25,12 @@
     - golangci-lint 설치 및 설정
     - .golangci.yml 구성
     - LLM_ROLE.md에 코드 품질 관리 규칙 추가
+
 - [x] 테스트 픽스처 구현
   - Asset, Transaction, Portfolio 테스트 데이터 정의
   - 테스트 픽스처 유틸리티 함수 구현
   - 테스트 코드 작성 및 검증
+
 - [x] 모니터링 시스템 개선
 - 메트릭 도메인 통합
 - `pkg/metrics` 패키지를 `metrics/domain`으로 통합
