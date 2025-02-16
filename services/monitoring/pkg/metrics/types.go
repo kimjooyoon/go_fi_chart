@@ -3,20 +3,22 @@ package metrics
 import (
 	"context"
 	"time"
+
+	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 )
 
 // Type 메트릭의 타입을 나타냅니다.
-type Type string
+type Type = domain.MetricType
 
 const (
 	// TypeCounter 카운터 타입 메트릭입니다.
-	TypeCounter Type = "counter"
+	TypeCounter = domain.TypeCounter
 	// TypeGauge 게이지 타입 메트릭입니다.
-	TypeGauge Type = "gauge"
+	TypeGauge = domain.TypeGauge
 	// TypeHistogram 히스토그램 타입 메트릭입니다.
-	TypeHistogram Type = "histogram"
+	TypeHistogram = domain.TypeHistogram
 	// TypeSummary 요약 타입 메트릭입니다.
-	TypeSummary Type = "summary"
+	TypeSummary = domain.TypeSummary
 )
 
 // Value 메트릭의 값을 나타냅니다.
@@ -28,10 +30,11 @@ type Value struct {
 
 // NewValue 새로운 메트릭 값을 생성합니다.
 func NewValue(raw float64, labels map[string]string) Value {
+	domainValue := domain.NewMetricValue(raw, labels)
 	return Value{
-		Raw:       raw,
-		Labels:    labels,
-		Timestamp: time.Now(),
+		Raw:       domainValue.Raw,
+		Labels:    domainValue.Labels,
+		Timestamp: domainValue.Timestamp,
 	}
 }
 

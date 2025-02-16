@@ -3,30 +3,22 @@ package alerts
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 )
 
 // AlertLevel 알림의 심각도를 나타냅니다.
-type AlertLevel string
+type AlertLevel = domain.AlertLevel
 
 const (
-	LevelInfo     AlertLevel = "INFO"
-	LevelWarning  AlertLevel = "WARNING"
-	LevelError    AlertLevel = "ERROR"
-	LevelCritical AlertLevel = "CRITICAL"
+	LevelInfo     = domain.LevelInfo
+	LevelWarning  = domain.LevelWarning
+	LevelError    = domain.LevelError
+	LevelCritical = domain.LevelCritical
 )
 
 // Alert 모니터링 시스템의 알림을 나타냅니다.
-type Alert struct {
-	ID        string            `json:"id"`
-	Level     AlertLevel        `json:"level"`
-	Source    string            `json:"source"`
-	Message   string            `json:"message"`
-	Timestamp time.Time         `json:"timestamp"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-}
+type Alert = domain.Alert
 
 // Notifier 알림을 처리하는 인터페이스입니다.
 type Notifier interface {

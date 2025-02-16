@@ -128,12 +128,12 @@
                         </option>
 
                         <option value="file22">
-                                github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (94.1%)
+                                github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (50.0%)
                         </option>
 
                         <option value="file23">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/github/collector.go
-                                (85.2%)
+                                (84.0%)
                         </option>
 
                         <option value="file24">
@@ -2873,30 +2873,22 @@ func (c *ActionCollector) Collect(ctx context.Context) ([]pkgmetrics.Metric, err
 import (
         "context"
         "sync"
-        "time"
 
         "github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 )
 
 // AlertLevel 알림의 심각도를 나타냅니다.
-type AlertLevel string
+type AlertLevel = domain.AlertLevel
 
 const (
-        LevelInfo     AlertLevel = "INFO"
-        LevelWarning  AlertLevel = "WARNING"
-        LevelError    AlertLevel = "ERROR"
-        LevelCritical AlertLevel = "CRITICAL"
+        LevelInfo     = domain.LevelInfo
+        LevelWarning  = domain.LevelWarning
+        LevelError    = domain.LevelError
+        LevelCritical = domain.LevelCritical
 )
 
 // Alert 모니터링 시스템의 알림을 나타냅니다.
-type Alert struct {
-        ID        string            `json:"id"`
-        Level     AlertLevel        `json:"level"`
-        Source    string            `json:"source"`
-        Message   string            `json:"message"`
-        Timestamp time.Time         `json:"timestamp"`
-        Metadata  map[string]string `json:"metadata,omitempty"`
-}
+type Alert = domain.Alert
 
 // Notifier 알림을 처리하는 인터페이스입니다.
 type Notifier interface {
@@ -3281,18 +3273,63 @@ import (
         pkgmetrics "github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
 )
 
-// SimpleCollector 기본적인 메트릭 수집기 구현체입니다.
-type SimpleCollector struct {
+// BaseCollector 모든 컬렉터의 기본 구현을 제공합니다.
+type BaseCollector struct {
         mu        sync.RWMutex
         metrics   []pkgmetrics.Metric
         publisher domain.Publisher
 }
 
+// NewBaseCollector 새로운 BaseCollector를 생성합니다.
+func NewBaseCollector(publisher domain.Publisher) *BaseCollector <span class="cov8" title="1">{
+        return &amp;BaseCollector{
+                metrics:   make([]pkgmetrics.Metric, 0),
+                publisher: publisher,
+        }
+}</span>
+
+// AddMetric 메트릭을 추가합니다.
+func (c *BaseCollector) AddMetric(metric pkgmetrics.Metric) error <span class="cov0" title="0">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        c.metrics = append(c.metrics, metric)
+        return nil
+}</span>
+
+// Collect 수집된 메트릭을 반환하고 이벤트를 발행합니다.
+func (c *BaseCollector) Collect(ctx context.Context) ([]pkgmetrics.Metric, error) <span class="cov0" title="0">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        metrics := make([]pkgmetrics.Metric, len(c.metrics))
+        copy(metrics, c.metrics)
+
+        evt := domain.NewMonitoringEvent(domain.TypeMetricCollected, metrics)
+        if err := c.publisher.Publish(ctx, evt); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">c.metrics = make([]pkgmetrics.Metric, 0)
+        return metrics, nil</span>
+}
+
+// Reset 수집된 메트릭을 초기화합니다.
+func (c *BaseCollector) Reset() <span class="cov0" title="0">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+        c.metrics = make([]pkgmetrics.Metric, 0)
+}</span>
+
+// SimpleCollector 기본적인 메트릭 수집기 구현체입니다.
+type SimpleCollector struct {
+        *BaseCollector
+}
+
 // NewSimpleCollector 새로운 SimpleCollector를 생성합니다.
 func NewSimpleCollector(publisher domain.Publisher) *SimpleCollector <span class="cov8" title="1">{
         return &amp;SimpleCollector{
-                metrics:   make([]pkgmetrics.Metric, 0),
-                publisher: publisher,
+                BaseCollector: NewBaseCollector(publisher),
         }
 }</span>
 
@@ -3338,20 +3375,20 @@ import (
         "time"
 
         "github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
-        "github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
+        pkgmetrics "github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
 )
 
 // Collector GitHub 메트릭을 수집하는 컬렉터입니다.
 type Collector struct {
-        mu        sync.Mutex
-        metrics   []ActionMetric
+        mu        sync.RWMutex
+        metrics   []pkgmetrics.Metric
         publisher domain.Publisher
 }
 
 // NewCollector 새로운 GitHub 메트릭 컬렉터를 생성합니다.
 func NewCollector(publisher domain.Publisher) *Collector <span class="cov8" title="1">{
         return &amp;Collector{
-                metrics:   make([]ActionMetric, 0),
+                metrics:   make([]pkgmetrics.Metric, 0),
                 publisher: publisher,
         }
 }</span>
@@ -3361,7 +3398,7 @@ func (c *Collector) AddActionStatusMetric(name string, status ActionStatus) erro
         metric := NewActionMetric(name, status, 0)
         c.mu.Lock()
         defer c.mu.Unlock()
-        c.metrics = append(c.metrics, metric)
+        c.metrics = append(c.metrics, metric.ToMetric())
         return nil
 }</span>
 
@@ -3370,39 +3407,35 @@ func (c *Collector) AddActionDurationMetric(name string, duration time.Duration)
         metric := NewActionMetric(name, ActionStatusSuccess, duration)
         c.mu.Lock()
         defer c.mu.Unlock()
-        c.metrics = append(c.metrics, metric)
-        return nil
-}</span>
+        c.metrics = append(c.metrics, metric.ToMetric())
+        if metric.Duration &gt; 0 </span><span class="cov8" title="1">{
+                c.metrics = append(c.metrics, metric.ToDurationMetric())
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
 
 // Collect 수집된 메트릭을 반환하고 이벤트를 발행합니다.
-func (c *Collector) Collect(ctx context.Context) ([]metrics.Metric, error) <span class="cov8" title="1">{
+func (c *Collector) Collect(ctx context.Context) ([]pkgmetrics.Metric, error) <span class="cov8" title="1">{
         c.mu.Lock()
         defer c.mu.Unlock()
 
-        result := make([]metrics.Metric, 0, len(c.metrics)*2)
-        for _, m := range c.metrics </span><span class="cov8" title="1">{
-                metric := m.ToMetric()
-                result = append(result, metric)
+        metrics := make([]pkgmetrics.Metric, len(c.metrics))
+        copy(metrics, c.metrics)
 
-                if m.Duration &gt; 0 </span><span class="cov8" title="1">{
-                        result = append(result, m.ToDurationMetric())
-                }</span>
+        evt := domain.NewMonitoringEvent(domain.TypeMetricCollected, metrics)
+        if err := c.publisher.Publish(ctx, evt); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
 
-                <span class="cov8" title="1">event := domain.NewMonitoringEvent(domain.TypeMetricCollected, metric)
-                if err := c.publisher.Publish(ctx, event); err != nil </span><span class="cov0" title="0">{
-                        return nil, err
-                }</span>
-        }
-
-        <span class="cov8" title="1">c.metrics = c.metrics[:0]
-        return result, nil</span>
+        <span class="cov8" title="1">c.metrics = make([]pkgmetrics.Metric, 0)
+        return metrics, nil</span>
 }
 
 // Reset 수집된 메트릭을 초기화합니다.
 func (c *Collector) Reset() <span class="cov0" title="0">{
         c.mu.Lock()
         defer c.mu.Unlock()
-        c.metrics = c.metrics[:0]
+        c.metrics = make([]pkgmetrics.Metric, 0)
 }</span>
 </pre>
 
@@ -3816,20 +3849,22 @@ func (c *SimpleChecker) SetStatus(status Status, err error) <span class="cov8" t
 import (
         "context"
         "time"
+
+        "github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 )
 
 // Type 메트릭의 타입을 나타냅니다.
-type Type string
+type Type = domain.MetricType
 
 const (
         // TypeCounter 카운터 타입 메트릭입니다.
-        TypeCounter Type = "counter"
+        TypeCounter = domain.TypeCounter
         // TypeGauge 게이지 타입 메트릭입니다.
-        TypeGauge Type = "gauge"
+        TypeGauge = domain.TypeGauge
         // TypeHistogram 히스토그램 타입 메트릭입니다.
-        TypeHistogram Type = "histogram"
+        TypeHistogram = domain.TypeHistogram
         // TypeSummary 요약 타입 메트릭입니다.
-        TypeSummary Type = "summary"
+        TypeSummary = domain.TypeSummary
 )
 
 // Value 메트릭의 값을 나타냅니다.
@@ -3841,10 +3876,11 @@ type Value struct {
 
 // NewValue 새로운 메트릭 값을 생성합니다.
 func NewValue(raw float64, labels map[string]string) Value <span class="cov0" title="0">{
+        domainValue := domain.NewMetricValue(raw, labels)
         return Value{
-                Raw:       raw,
-                Labels:    labels,
-                Timestamp: time.Now(),
+                Raw:       domainValue.Raw,
+                Labels:    domainValue.Labels,
+                Timestamp: domainValue.Timestamp,
         }
 }</span>
 
