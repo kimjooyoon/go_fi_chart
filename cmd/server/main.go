@@ -14,7 +14,7 @@ import (
 	"github.com/aske/go_fi_chart/internal/config"
 	"github.com/aske/go_fi_chart/internal/domain/asset"
 	"github.com/aske/go_fi_chart/internal/domain/gamification"
-	"github.com/go-chi/chi/v5"
+	chi "github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
