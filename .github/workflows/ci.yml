@@ -37,7 +37,9 @@ jobs:
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: Run all checks
-        run: make all
+        run: |
+          go mod tidy
+          make all
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
