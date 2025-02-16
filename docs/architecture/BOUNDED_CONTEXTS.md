@@ -4,142 +4,358 @@
 
 Go Fi Chart는 다음과 같은 바운디드 컨텍스트로 구성됩니다:
 
-## 1. 자산 관리 서비스 (Asset Management)
+## 1. 자산 관리 컨텍스트 (Asset Management)
 
 ### 책임
-- 자산 CRUD 작업
-- 포트폴리오 관리
+- 자산 생명주기 관리
+- 포트폴리오 구성 관리
 - 거래 처리 및 기록
 
-### 도메인 모델
-- **Asset**: 자산 정보
-- ID, 이름, 유형, 가치 등
-- **Portfolio**: 포트폴리오 구성
-- 자산 목록, 할당 비율 등
-- **Transaction**: 거래 기록
-- 거래 유형, 금액, 시간 등
+### Aggregates
+```typescript
+// Asset Aggregate
+aggregate Asset {
+// Root Entity
+Asset {
+id: AggregateId
+name: string
+type: AssetType
+currentValue: Money
+priceHistory: PricePoint[]
+metadata: Map
+<string, string>
+}
 
-### API 엔드포인트
-- `/api/v1/assets`
-- `/api/v1/portfolios`
-- `/api/v1/transactions`
+// Value Objects
+AssetType: 'stock' | 'bond' | 'cash'
+Money {
+amount: Decimal
+currency: string
+}
+PricePoint {
+timestamp: DateTime
+value: Money
+}
+}
 
-## 2. 분석 서비스 (Analysis)
+// Portfolio Aggregate
+aggregate Portfolio {
+// Root Entity
+Portfolio {
+id: AggregateId
+name: string
+allocations: AssetAllocation[]
+totalValue: Money
+metadata: Map
+<string, string>
+}
+
+// Entities
+AssetAllocation {
+assetId: string
+ratio: Percentage
+targetValue: Money
+currentValue: Money
+}
+}
+
+// Transaction Aggregate
+aggregate Transaction {
+// Root Entity
+Transaction {
+id: AggregateId
+type: TransactionType
+assetId: string
+quantity: Decimal
+price: Money
+executedAt: DateTime
+status: TransactionStatus
+}
+}
+```
+
+### 도메인 서비스
+```go
+type PortfolioService interface {
+Rebalance(ctx context.Context, portfolio Portfolio) error
+CalculateValue(ctx context.Context, portfolio Portfolio) (Money, error)
+}
+
+type TransactionService interface {
+ExecuteTransaction(ctx context.Context, transaction Transaction) error
+ValidateTransaction(ctx context.Context, transaction Transaction) error
+}
+```
+
+## 2. 분석 컨텍스트 (Analysis)
 
 ### 책임
 - 시계열 데이터 분석
-- 포트폴리오 최적화
-- 리스크 분석
+- 포트폴리오 성과 분석
+- 리스크 평가
 
-### 도메인 모델
-- **TimeSeriesData**: 시계열 데이터
-- 시간, 값, 메타데이터
-- **PortfolioAnalysis**: 포트폴리오 분석
-- 성과 지표, 최적화 결과
-- **RiskMetrics**: 리스크 지표
-- VaR, 변동성, 상관관계
+### Aggregates
+```typescript
+// Analysis Aggregate
+aggregate Analysis {
+// Root Entity
+PortfolioAnalysis {
+id: AggregateId
+portfolioId: string
+period: AnalysisPeriod
+metrics: AnalysisMetrics
+riskMetrics: RiskMetrics
+status: AnalysisStatus
+}
+}
 
-### API 엔드포인트
-- `/api/v1/analysis/timeseries`
-- `/api/v1/analysis/portfolio`
-- `/api/v1/analysis/risk`
+// TimeSeries Aggregate
+aggregate TimeSeries {
+// Root Entity
+TimeSeriesData {
+id: AggregateId
+assetId: string
+dataPoints: DataPoint[]
+metadata: Map
+<string, string>
+}
+}
+```
 
-## 3. 모니터링 서비스 (Monitoring)
+### 도메인 서비스
+```go
+type AnalysisService interface {
+AnalyzePortfolio(ctx context.Context, portfolioId string, period AnalysisPeriod) error
+CalculateRiskMetrics(ctx context.Context, analysisId string) error
+}
+
+type TimeSeriesService interface {
+ProcessTimeSeriesData(ctx context.Context, data TimeSeriesData) error
+AnalyzeTimeSeries(ctx context.Context, timeSeriesId string) error
+}
+```
+
+## 3. 모니터링 컨텍스트 (Monitoring)
 
 ### 책임
-- 시스템 상태 모니터링
-- 메트릭 수집
+- 시스템 메트릭 수집
 - 알림 관리
+- 상태 모니터링
 
-### 도메인 모델
-- **Metric**: 메트릭 정보
-- 이름, 값, 타입, 레이블
-- **Alert**: 알림 정보
-- 수준, 메시지, 상태
-- **HealthCheck**: 상태 체크
-- 서비스 상태, 에러 정보
+### Aggregates
+```typescript
+// Metric Aggregate
+aggregate Metric {
+// Root Entity
+Metric {
+id: AggregateId
+name: string
+type: MetricType
+value: MetricValue
+labels: Map
+<string, string>
+}
+}
 
-### API 엔드포인트
-- `/api/v1/metrics`
-- `/api/v1/alerts`
-- `/api/v1/health`
+// Alert Aggregate
+aggregate Alert {
+// Root Entity
+Alert {
+id: AggregateId
+level: AlertLevel
+source: string
+message: string
+status: AlertStatus
+metadata: Map
+<string, string>
+}
+}
+```
 
-## 4. 데이터 수집 서비스 (Data Collection)
+### 도메인 서비스
+```go
+type MetricService interface {
+CollectMetrics(ctx context.Context) error
+ProcessMetrics(ctx context.Context, metrics []Metric) error
+}
 
-### 책임
-- 실시간 데이터 수집
-- ETL 프로세스 관리
-- 데이터 품질 관리
+type AlertService interface {
+ProcessAlert(ctx context.Context, alert Alert) error
+NotifyAlert(ctx context.Context, alert Alert) error
+}
+```
 
-### 도메인 모델
-- **DataSource**: 데이터 소스
-- 소스 정보, 연결 설정
-- **DataPipeline**: 데이터 파이프라인
-- 처리 단계, 상태
-- **DataQuality**: 데이터 품질
-- 검증 규칙, 품질 지표
+## 컨텍스트 간 통신
 
-### API 엔드포인트
-- `/api/v1/datasources`
-- `/api/v1/pipelines`
-- `/api/v1/quality`
+### 1. 이벤트 기반 통신
+```go
+// Domain Events
+type DomainEvent interface {
+AggregateID() string
+EventType() string
+Version() int
+Timestamp() time.Time
+Payload() interface{}
+}
 
-## 5. 시각화 서비스 (Visualization)
+// Event Types
+const (
+AssetCreated = "asset.created"
+AssetUpdated = "asset.updated"
+PortfolioRebalanced = "portfolio.rebalanced"
+TransactionExecuted = "transaction.executed"
+AnalysisCompleted = "analysis.completed"
+AlertTriggered = "alert.triggered"
+)
 
-### 책임
-- 차트 생성
-- 대시보드 관리
-- 데이터 탐색 인터페이스
+// Event Store
+type EventStore interface {
+SaveEvents(ctx context.Context, aggregateId string, events []DomainEvent) error
+GetEvents(ctx context.Context, aggregateId string) ([]DomainEvent, error)
+}
+```
 
-### 도메인 모델
-- **Chart**: 차트 정보
-- 타입, 데이터, 설정
-- **Dashboard**: 대시보드
-- 레이아웃, 위젯
-- **DataExplorer**: 데이터 탐색
-- 쿼리, 필터, 뷰
+### 2. 동기 통신 (필요한 경우)
+```go
+// Context Interfaces
+type AssetManagementContext interface {
+GetAsset(ctx context.Context, id string) (Asset, error)
+GetPortfolio(ctx context.Context, id string) (Portfolio, error)
+}
 
-### API 엔드포인트
-- `/api/v1/charts`
-- `/api/v1/dashboards`
-- `/api/v1/explorer`
+type AnalysisContext interface {
+GetAnalysis(ctx context.Context, id string) (Analysis, error)
+GetTimeSeries(ctx context.Context, id string) (TimeSeries, error)
+}
+```
 
-## 6. 게이미피케이션 서비스 (Gamification)
+## 데이터 일관성 전략
 
-### 책임
-- 사용자 참여 관리
-- 보상 시스템
-- 진행 상황 추적
+### 1. Aggregate 내부
+- 강한 일관성 (Strong Consistency)
+- 트랜잭션 단위로 처리
+- 불변식 즉시 적용
 
-### 도메인 모델
-- **Profile**: 사용자 프로필
-- 레벨, 경험치, 뱃지
-- **Reward**: 보상
-- 타입, 조건, 가치
-- **Progress**: 진행 상황
-- 목표, 달성도, 스트릭
+### 2. Aggregate 간
+- 최종 일관성 (Eventual Consistency)
+- 이벤트 기반 동기화
+- SAGA 패턴 활용
 
-### API 엔드포인트
-- `/api/v1/profiles`
-- `/api/v1/rewards`
-- `/api/v1/progress`
+### 3. 컨텍스트 간
+- 느슨한 결합
+- 비동기 통신 선호
+- Anti-Corruption Layer 사용
 
-## 서비스 간 통신
+## 구현 가이드라인
 
-### 이벤트 기반 통신
-- **Event Bus**: 도메인 이벤트 발행/구독
-- **Message Queue**: 비동기 작업 처리
+### 1. Aggregate 설계
+```go
+// Aggregate Root Interface
+type AggregateRoot interface {
+ID() string
+Version() int
+Events() []DomainEvent
+ClearEvents()
+}
 
-### 동기 통신
-- **HTTP/gRPC**: 서비스 간 직접 통신
-- **API Gateway**: 클라이언트 요청 라우팅
+// Base Aggregate Implementation
+type BaseAggregate struct {
+id      string
+version int
+events  []DomainEvent
+}
 
-## 데이터 일관성
+func (a *BaseAggregate) ID() string { return a.id }
+func (a *BaseAggregate) Version() int { return a.version }
+func (a *BaseAggregate) Events() []DomainEvent { return a.events }
+func (a *BaseAggregate) ClearEvents() { a.events = nil }
+```
 
-### SAGA 패턴
-- 분산 트랜잭션 관리
-- 보상 트랜잭션 구현
+### 2. Repository 패턴
+```go
+// Generic Repository Interface
+type Repository[T AggregateRoot] interface {
+Save(ctx context.Context, aggregate T) error
+FindById(ctx context.Context, id string) (T, error)
+Delete(ctx context.Context, id string) error
+}
 
-### 이벤트 소싱
-- 상태 변경 이벤트 기록
-- 이벤트 스토어 구현 
+// Event Sourcing Repository
+type EventSourcingRepository[T AggregateRoot] interface {
+Repository[T]
+SaveEvents(ctx context.Context, events []DomainEvent) error
+GetEvents(ctx context.Context, aggregateId string) ([]DomainEvent, error)
+}
+```
+
+### 3. Anti-Corruption Layer
+```go
+// Example for External Service Integration
+type ExternalPricingService interface {
+GetPrice(symbol string) (float64, error)
+}
+
+// Anti-Corruption Layer
+type PricingAdapter struct {
+external ExternalPricingService
+}
+
+func (a *PricingAdapter) GetAssetPrice(asset Asset) (Money, error) {
+price, err := a.external.GetPrice(asset.Symbol())
+if err != nil {
+return Money{}, err
+}
+return NewMoney(price, asset.Currency()), nil
+}
+```
+
+## 테스트 전략
+
+### 1. Aggregate 테스트
+```go
+func TestPortfolioAggregate(t *testing.T) {
+// Given
+portfolio := NewPortfolio("Test Portfolio")
+
+// When
+portfolio.AddAllocation(AssetID("1"), Percentage(50))
+portfolio.AddAllocation(AssetID("2"), Percentage(50))
+
+// Then
+assert.Len(t, portfolio.Events(), 2)
+assert.Equal(t, "portfolio.allocation.added", portfolio.Events()[0].EventType())
+}
+```
+
+### 2. 도메인 서비스 테스트
+```go
+func TestPortfolioService(t *testing.T) {
+// Given
+service := NewPortfolioService(mockRepo, mockEventStore)
+portfolio := NewPortfolio("Test Portfolio")
+
+// When
+err := service.Rebalance(context.Background(), portfolio)
+
+// Then
+assert.NoError(t, err)
+assert.Equal(t, "rebalanced", portfolio.Status())
+}
+```
+
+### 3. 통합 테스트
+```go
+func TestAssetManagementContext(t *testing.T) {
+// Given
+ctx := NewAssetManagementContext(config)
+
+// When
+asset := ctx.CreateAsset(NewAssetCommand{...})
+portfolio := ctx.CreatePortfolio(NewPortfolioCommand{...})
+
+// Then
+assert.NotNil(t, asset)
+assert.NotNil(t, portfolio)
+assert.NoError(t, ctx.Errors())
+}
+``` 

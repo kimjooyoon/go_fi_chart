@@ -1,180 +1,435 @@
 # 도메인 분석
 
-## 도메인 분류
+## 도메인 분류 및 Aggregate 설계
 
 ### 핵심 도메인 (Core Domain)
 
 1. **자산 관리 (Asset Management)**
 - 비즈니스 차별화의 핵심
 - 높은 복잡도와 전문성 요구
-- 구성 요소:
-- 자산 관리
-- 포트폴리오 관리
-- 거래 처리
-- 우선순위: 최상
-- DR 고려사항:
-- 데이터 일관성 필수
-- 높은 신뢰성 요구
-- 실시간 처리 중요
+
+#### Aggregates
+```typescript
+// Asset Aggregate
+aggregate Asset {
+// Root Entity
+Asset {
+id: AggregateId
+name: string
+type: AssetType
+currentValue: Money
+priceHistory: PricePoint[]
+metadata: Map
+<string, string>
+}
+
+// Value Objects
+AssetType: 'stock' | 'bond' | 'cash'
+Money {
+amount: Decimal
+currency: string
+}
+PricePoint {
+timestamp: DateTime
+value: Money
+}
+}
+
+// Portfolio Aggregate
+aggregate Portfolio {
+// Root Entity
+Portfolio {
+id: AggregateId
+name: string
+allocations: AssetAllocation[]
+totalValue: Money
+metadata: Map
+<string, string>
+}
+
+// Entities
+AssetAllocation {
+assetId: string
+ratio: Percentage
+targetValue: Money
+currentValue: Money
+}
+
+// Value Objects
+Percentage: Decimal // 0-100
+}
+
+// Transaction Aggregate
+aggregate Transaction {
+// Root Entity
+Transaction {
+id: AggregateId
+type: TransactionType
+assetId: string
+quantity: Decimal
+price: Money
+executedAt: DateTime
+status: TransactionStatus
+}
+
+// Value Objects
+TransactionType: 'buy' | 'sell'
+TransactionStatus: 'pending' | 'executed' | 'failed'
+}
+```
+
+#### 도메인 서비스
+- PortfolioValuationService
+- AssetAllocationService
+- TransactionExecutionService
+
+#### 정책
+- 포트폴리오 총 할당 비율은 100%를 초과할 수 없음
+- 거래는 생성 후 수정 불가
+- 자산 가격 변경 시 연관 포트폴리오 재평가
 
 2. **분석 엔진 (Analysis Engine)**
 - 핵심 비즈니스 가치 제공
 - 복잡한 알고리즘 구현
-- 구성 요소:
-- 시계열 분석
-- 포트폴리오 최적화
-- 리스크 분석
-- 우선순위: 최상
-- DR 고려사항:
-- 높은 계산 능력 필요
-- 확장성 중요
-- 결과의 정확성 필수
+
+#### Aggregates
+```typescript
+// Analysis Aggregate
+aggregate Analysis {
+// Root Entity
+PortfolioAnalysis {
+id: AggregateId
+portfolioId: string
+period: AnalysisPeriod
+metrics: AnalysisMetrics
+riskMetrics: RiskMetrics
+status: AnalysisStatus
+}
+
+// Value Objects
+AnalysisPeriod {
+start: DateTime
+end: DateTime
+}
+
+AnalysisMetrics {
+returns: Decimal
+volatility: Decimal
+sharpeRatio: Decimal
+}
+
+RiskMetrics {
+var: Decimal
+beta: Decimal
+correlations: Map
+<string, Decimal>
+}
+
+AnalysisStatus: 'in_progress' | 'completed' | 'failed'
+}
+
+// TimeSeries Aggregate
+aggregate TimeSeries {
+// Root Entity
+TimeSeriesData {
+id: AggregateId
+assetId: string
+dataPoints: DataPoint[]
+metadata: Map
+<string, string>
+}
+
+// Value Objects
+DataPoint {
+timestamp: DateTime
+value: Decimal
+confidence: Decimal
+}
+}
+```
+
+#### 도메인 서비스
+- TimeSeriesAnalysisService
+- RiskAssessmentService
+- PortfolioOptimizationService
 
 ### 일반 도메인 (Generic Domain)
 
 1. **데이터 수집 (Data Collection)**
 - 표준화된 프로세스 존재
 - 재사용 가능한 컴포넌트
-- 구성 요소:
-- 데이터 소스 관리
-- ETL 프로세스
-- 데이터 검증
-- 우선순위: 높음
-- DR 고려사항:
-- 데이터 신뢰성
-- 처리 성능
-- 장애 복구
+
+#### Aggregates
+```typescript
+// DataSource Aggregate
+aggregate DataSource {
+// Root Entity
+DataSource {
+id: AggregateId
+type: SourceType
+config: SourceConfig
+status: SourceStatus
+metadata: Map
+<string, string>
+}
+
+// Value Objects
+SourceType: 'api' | 'file' | 'database'
+SourceStatus: 'active' | 'inactive' | 'error'
+SourceConfig {
+credentials: Credentials
+endpoint: string
+parameters: Map
+<string, string>
+}
+}
+
+// Pipeline Aggregate
+aggregate Pipeline {
+// Root Entity
+Pipeline {
+id: AggregateId
+sourceId: string
+steps: PipelineStep[]
+schedule: Schedule
+status: PipelineStatus
+}
+
+// Value Objects
+PipelineStep {
+type: StepType
+config: Map
+<string, string>
+}
+StepType: 'extract' | 'transform' | 'load'
+PipelineStatus: 'running' | 'paused' | 'failed'
+}
+```
 
 2. **시각화 (Visualization)**
 - 일반적인 차트/대시보드 기능
 - 시장 표준 존재
-- 구성 요소:
-- 차트 렌더링
-- 대시보드 관리
-- 데이터 탐색
-- 우선순위: 중간
-- DR 고려사항:
-- 사용자 경험
-- 실시간 업데이트
-- 브라우저 호환성
+
+#### Aggregates
+```typescript
+// Chart Aggregate
+aggregate Chart {
+// Root Entity
+Chart {
+id: AggregateId
+type: ChartType
+dataSource: DataSourceConfig
+config: ChartConfig
+metadata: Map
+<string, string>
+}
+
+// Value Objects
+ChartType: 'line' | 'bar' | 'candlestick'
+ChartConfig {
+title: string
+axes: AxisConfig[]
+style: StyleConfig
+}
+}
+
+// Dashboard Aggregate
+aggregate Dashboard {
+// Root Entity
+Dashboard {
+id: AggregateId
+name: string
+layout: LayoutConfig
+widgets: Widget[]
+}
+
+// Entities
+Widget {
+id: string
+type: WidgetType
+sourceId: string
+position: Position
+config: Map
+<string, string>
+}
+
+// Value Objects
+WidgetType: 'chart' | 'metric' | 'alert'
+Position {
+x: number
+y: number
+width: number
+height: number
+}
+}
+```
 
 ### 지원 도메인 (Supporting Domain)
 
 1. **모니터링 (Monitoring)**
 - 시스템 운영 지원
 - 표준화된 솔루션 존재
-- 구성 요소:
-- 메트릭 수집
-- 알림 관리
-- 상태 체크
-- 우선순위: 중간
-- DR 고려사항:
-- 시스템 가용성
-- 알림 신뢰성
-- 확장성
+
+#### Aggregates
+```typescript
+// Metric Aggregate
+aggregate Metric {
+// Root Entity
+Metric {
+id: AggregateId
+name: string
+type: MetricType
+value: MetricValue
+labels: Map
+<string, string>
+}
+
+// Value Objects
+MetricType: 'counter' | 'gauge' | 'histogram' | 'summary'
+MetricValue {
+raw: Decimal
+timestamp: DateTime
+}
+}
+
+// Alert Aggregate
+aggregate Alert {
+// Root Entity
+Alert {
+id: AggregateId
+level: AlertLevel
+source: string
+message: string
+status: AlertStatus
+metadata: Map
+<string, string>
+}
+
+// Value Objects
+AlertLevel: 'info' | 'warning' | 'error' | 'critical'
+AlertStatus: 'new' | 'acknowledged' | 'resolved'
+}
+```
 
 2. **게이미피케이션 (Gamification)**
 - 사용자 참여 촉진
 - 부가 기능
-- 구성 요소:
-- 사용자 프로필
-- 보상 시스템
-- 진행 상황 관리
-- 우선순위: 낮음
-- DR 고려사항:
-- 사용자 경험
-- 데이터 일관성
-- 성능 영향 최소화
+
+#### Aggregates
+```typescript
+// Profile Aggregate
+aggregate Profile {
+// Root Entity
+Profile {
+id: AggregateId
+userId: string
+level: number
+experience: number
+badges: Badge[]
+achievements: Achievement[]
+}
+
+// Value Objects
+Badge {
+type: BadgeType
+earnedAt: DateTime
+}
+Achievement {
+type: AchievementType
+progress: number
+completedAt: DateTime
+}
+}
+
+// Reward Aggregate
+aggregate Reward {
+// Root Entity
+Reward {
+id: AggregateId
+profileId: string
+type: RewardType
+amount: number
+reason: string
+status: RewardStatus
+}
+
+// Value Objects
+RewardType: 'xp' | 'badge' | 'achievement'
+RewardStatus: 'pending' | 'granted' | 'expired'
+}
+```
+
+## 구현 전략
+
+### 1. 영속성 전략
+- NoSQL 데이터베이스 사용 (MongoDB)
+- 각 Aggregate를 독립된 문서로 저장
+- 참조는 ID만 유지
+- 이벤트 소싱으로 변경 이력 관리
+
+### 2. Repository 인터페이스
+```go
+type Repository[T any] interface {
+Save(ctx context.Context, aggregate T) error
+FindById(ctx context.Context, id string) (T, error)
+Delete(ctx context.Context, id string) error
+}
+
+type EventStore interface {
+SaveEvents(ctx context.Context, aggregateId string, events []DomainEvent) error
+GetEvents(ctx context.Context, aggregateId string) ([]DomainEvent, error)
+}
+```
+
+### 3. 도메인 이벤트
+```go
+type DomainEvent interface {
+AggregateID() string
+EventType() string
+Version() int
+Timestamp() time.Time
+Payload() interface{}
+}
+```
+
+### 4. CQRS 패턴
+- 명령과 조회 책임 분리
+- 읽기 모델은 목적에 맞게 최적화
+- 이벤트 소싱과 연계하여 구현
 
 ## 구현 우선순위
 
 1. 1단계 (즉시 구현)
-- 자산 관리 서비스
-- 분석 엔진 (기본 기능)
-- 데이터 수집 (핵심 소스)
+- Asset Aggregate 구현
+- Portfolio Aggregate 구현
+- 기본 Repository 구현
+- 이벤트 스토어 구현
 
 2. 2단계 (2-3개월 내)
-- 분석 엔진 (고급 기능)
-- 시각화 (기본 차트)
-- 모니터링 (기본 기능)
+- Transaction Aggregate 구현
+- Analysis Aggregate 구현
+- CQRS 기반 조회 최적화
+- 이벤트 핸들러 구현
 
 3. 3단계 (4-6개월 내)
-- 시각화 (고급 기능)
-- 데이터 수집 (추가 소스)
-- 모니터링 (고급 기능)
-
-4. 4단계 (7-12개월 내)
-- 게이미피케이션
-- 고급 분석 기능
-- 커스텀 기능
-
-## 도메인 간 관계
-
-### 동기화가 필요한 컨텍스트
-1. 자산 관리 ↔ 분석 엔진
-- 실시간 포트폴리오 분석
-- 거래 데이터 동기화
-
-2. 데이터 수집 ↔ 자산 관리
-- 실시간 가격 정보
-- 시장 데이터 업데이트
-
-### 느슨한 결합이 가능한 컨텍스트
-1. 시각화 ↔ 기타 서비스
-- 비동기 데이터 업데이트
-- 캐시 활용 가능
-
-2. 게이미피케이션 ↔ 기타 서비스
-- 이벤트 기반 통신
-- 지연 허용
-
-## 기술적 고려사항
-
-### 데이터 일관성
-1. 핵심 도메인
-- 강한 일관성 (Strong Consistency)
-- 트랜잭션 보장
-- 실시간 동기화
-
-2. 일반 도메인
-- 최종 일관성 (Eventual Consistency)
-- SAGA 패턴 활용
-- 비동기 처리
-
-3. 지원 도메인
-- 느슨한 일관성
-- 이벤트 기반 동기화
-- 캐시 활용
-
-### 확장성 전략
-1. 핵심 도메인
-- 수평적 확장
-- 샤딩 고려
-- 고가용성 설계
-
-2. 일반 도메인
-- 필요에 따른 확장
-- 로드 밸런싱
-- 캐시 전략
-
-3. 지원 도메인
-- 독립적 확장
-- 리소스 제한
-- 비용 효율성
-
-## 구현 전략
-
-### 1단계: 도메인 모델 구현
-- 각 도메인의 핵심 엔티티 정의
-- 도메인 이벤트 식별
-- 유비쿼터스 언어 확립
-
-### 2단계: 서비스 구현
+- 나머지 Aggregate 구현
 - 도메인 서비스 구현
-- 인프라스트럭처 설정
-- 통합 테스트
+- 통합 테스트 구현
 
-### 3단계: 통합 및 배포
-- 서비스 간 통신 구현
-- 모니터링 설정
-- 단계적 배포 
+## 기술 스택
+
+1. **백엔드**
+- 언어: Go
+- 데이터베이스: MongoDB
+- 이벤트 스토어: EventStoreDB
+- 메시지 큐: Apache Kafka
+
+2. **프론트엔드**
+- React + TypeScript
+- 상태 관리: Redux
+- 차트: D3.js
+
+3. **인프라**
+- Kubernetes
+- Docker
+- Prometheus + Grafana 
