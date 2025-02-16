@@ -30,48 +30,42 @@ func (p *mockPublisher) Unsubscribe(_ domain.Handler) error {
 	return nil
 }
 
-func Test_NewActionCollector_should_create_empty_collector(t *testing.T) {
+func Test_NewCollector_should_create_empty_collector(t *testing.T) {
 	// Given
 	publisher := &mockPublisher{events: make([]domain.Event, 0)}
 
 	// When
-	collector := NewActionCollector(publisher)
+	collector := NewCollector(publisher)
 
 	// Then
 	assert.NotNil(t, collector)
 	assert.Empty(t, collector.metrics)
 }
 
-func Test_ActionCollector_should_add_and_collect_metrics(t *testing.T) {
+func Test_Collector_should_add_and_collect_metrics(t *testing.T) {
 	// Given
 	publisher := &mockPublisher{events: make([]domain.Event, 0)}
-	collector := NewActionCollector(publisher)
-	startTime := time.Now()
-	metric := ActionMetric{
-		WorkflowName: "test-action",
-		Status:       ActionStatusSuccess,
-		StartedAt:    startTime,
-	}
+	collector := NewCollector(publisher)
 
 	// When
-	err := collector.AddMetric(metric)
+	err := collector.AddActionStatusMetric("test-action", ActionStatusSuccess)
 	assert.NoError(t, err)
 	metrics, err := collector.Collect(context.Background())
 
 	// Then
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, metric.WorkflowName, metrics[0].WorkflowName)
-	assert.Equal(t, metric.Status, metrics[0].Status)
-	assert.Equal(t, metric.StartedAt, metrics[0].StartedAt)
+	assert.Equal(t, "test-action", metrics[0].Name())
+	assert.Equal(t, float64(1), metrics[0].Value().Raw)
+	assert.Equal(t, "success", metrics[0].Value().Labels["status"])
 	assert.Len(t, publisher.events, 1)
 	assert.Equal(t, domain.TypeMetricCollected, publisher.events[0].Type)
 }
 
-func Test_ActionCollector_should_add_duration_metric(t *testing.T) {
+func Test_Collector_should_add_duration_metric(t *testing.T) {
 	// Given
 	publisher := &mockPublisher{events: make([]domain.Event, 0)}
-	collector := NewActionCollector(publisher)
+	collector := NewCollector(publisher)
 	duration := 10 * time.Second
 
 	// When
@@ -81,54 +75,55 @@ func Test_ActionCollector_should_add_duration_metric(t *testing.T) {
 
 	// Then
 	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	assert.Len(t, metrics, 2)
 
-	metric := metrics[0]
-	assert.Equal(t, "test-action", metric.WorkflowName)
-	assert.InDelta(t, duration, metric.Duration, float64(10*time.Millisecond))
-	assert.True(t, metric.FinishedAt.After(metric.StartedAt))
-	assert.InDelta(t, duration.Seconds(), metric.FinishedAt.Sub(metric.StartedAt).Seconds(), 0.1)
+	statusMetric := metrics[0]
+	durationMetric := metrics[1]
+
+	assert.Equal(t, "test-action", statusMetric.Name())
+	assert.Equal(t, float64(1), statusMetric.Value().Raw)
+	assert.Equal(t, "success", statusMetric.Value().Labels["status"])
+
+	assert.Equal(t, "test-action_duration", durationMetric.Name())
+	assert.InDelta(t, duration.Seconds(), durationMetric.Value().Raw, 0.1)
+	assert.Equal(t, "test-action", durationMetric.Value().Labels["action"])
+	assert.Len(t, publisher.events, 1)
 }
 
-func Test_ActionCollector_should_handle_different_statuses(t *testing.T) {
+func Test_Collector_should_handle_different_statuses(t *testing.T) {
 	// Given
 	publisher := &mockPublisher{events: make([]domain.Event, 0)}
-	collector := NewActionCollector(publisher)
-	startTime := time.Now()
+	collector := NewCollector(publisher)
 
 	testCases := []struct {
-		status ActionStatus
+		status   ActionStatus
+		expected float64
 	}{
-		{ActionStatusSuccess},
-		{ActionStatusFailure},
-		{ActionStatusInProgress},
-		{"unknown"},
+		{ActionStatusSuccess, 1},
+		{ActionStatusFailure, 0},
+		{ActionStatusInProgress, 2},
+		{"unknown", -1},
 	}
 
 	for _, tc := range testCases {
 		// When
 		err := collector.AddActionStatusMetric("test-action", tc.status)
 		assert.NoError(t, err)
-	}
+		metrics, err := collector.Collect(context.Background())
 
-	metrics, err := collector.Collect(context.Background())
-
-	// Then
-	assert.NoError(t, err)
-	assert.Len(t, metrics, len(testCases))
-
-	for i, metric := range metrics {
-		assert.Equal(t, "test-action", metric.WorkflowName)
-		assert.Equal(t, testCases[i].status, metric.Status)
-		assert.True(t, metric.StartedAt.After(startTime))
-		assert.True(t, metric.StartedAt.Before(time.Now()))
+		// Then
+		assert.NoError(t, err)
+		assert.Len(t, metrics, 1)
+		assert.Equal(t, "test-action", metrics[0].Name())
+		assert.Equal(t, tc.expected, metrics[0].Value().Raw)
+		assert.Equal(t, string(tc.status), metrics[0].Value().Labels["status"])
 	}
 }
 
-func Test_ActionCollector_should_be_thread_safe(_ *testing.T) {
+func Test_Collector_should_be_thread_safe(_ *testing.T) {
 	// Given
 	publisher := &mockPublisher{events: make([]domain.Event, 0)}
-	collector := NewActionCollector(publisher)
+	collector := NewCollector(publisher)
 	iterations := 1000
 	done := make(chan bool)
 

@@ -5,7 +5,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aske/go_fi_chart/internal/domain/event"
 	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 	pkgmetrics "github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
 	"github.com/stretchr/testify/assert"
@@ -23,11 +22,11 @@ func (p *mockPublisher) Publish(_ context.Context, evt domain.Event) error {
 	return nil
 }
 
-func (p *mockPublisher) Subscribe(_ event.Handler) error {
+func (p *mockPublisher) Subscribe(_ domain.Handler) error {
 	return nil
 }
 
-func (p *mockPublisher) Unsubscribe(_ event.Handler) error {
+func (p *mockPublisher) Unsubscribe(_ domain.Handler) error {
 	return nil
 }
 
