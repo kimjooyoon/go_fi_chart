@@ -140,15 +140,31 @@
                                 (0.0%)
                         </option>
 
-                        <option value="file10">github.com/aske/go_fi_chart/services/monitoring/pkg/domain/types.go
-                                (0.0%)
+                        <option value="file10">
+                                github.com/aske/go_fi_chart/services/monitoring/metrics/collectors/base.go (93.8%)
                         </option>
 
-                        <option value="file11">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                        <option value="file11">
+                                github.com/aske/go_fi_chart/services/monitoring/metrics/collectors/simple.go (100.0%)
+                        </option>
+
+                        <option value="file12">github.com/aske/go_fi_chart/services/monitoring/metrics/domain/metric.go
                                 (100.0%)
                         </option>
 
-                        <option value="file12">github.com/aske/go_fi_chart/services/monitoring/pkg/metrics/types.go
+                        <option value="file13">github.com/aske/go_fi_chart/services/monitoring/metrics/domain/types.go
+                                (100.0%)
+                        </option>
+
+                        <option value="file14">github.com/aske/go_fi_chart/services/monitoring/pkg/domain/types.go
+                                (0.0%)
+                        </option>
+
+                        <option value="file15">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                                (100.0%)
+                        </option>
+
+                        <option value="file16">github.com/aske/go_fi_chart/services/monitoring/pkg/metrics/types.go
                                 (0.0%)
                         </option>
 
@@ -949,7 +965,233 @@ type Collector interface {
 }
 </pre>
 
-        <pre class="file" id="file10" style="display: none">package domain
+        <pre class="file" id="file10" style="display: none">package collectors
+
+import (
+        "context"
+        "sync"
+
+        "github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
+)
+
+// BaseCollector 모든 컬렉터의 기본 구현을 제공합니다.
+type BaseCollector struct {
+        mu        sync.RWMutex
+        metrics   []domain.Metric
+        publisher domain.Publisher
+}
+
+// NewBaseCollector 새로운 BaseCollector를 생성합니다.
+func NewBaseCollector(publisher domain.Publisher) *BaseCollector <span class="cov8" title="1">{
+        return &amp;BaseCollector{
+                metrics:   make([]domain.Metric, 0),
+                publisher: publisher,
+        }
+}</span>
+
+// AddMetric 메트릭을 추가합니다.
+func (c *BaseCollector) AddMetric(metric domain.Metric) error <span class="cov8" title="1">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        c.metrics = append(c.metrics, metric)
+        return nil
+}</span>
+
+// Collect 수집된 메트릭을 반환하고 이벤트를 발행합니다.
+func (c *BaseCollector) Collect(ctx context.Context) ([]domain.Metric, error) <span class="cov8" title="1">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        metrics := make([]domain.Metric, len(c.metrics))
+        copy(metrics, c.metrics)
+
+        if err := c.publisher.Publish(ctx, metrics); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">c.metrics = make([]domain.Metric, 0)
+        return metrics, nil</span>
+}
+
+// Reset 수집된 메트릭을 초기화합니다.
+func (c *BaseCollector) Reset() <span class="cov8" title="1">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+        c.metrics = make([]domain.Metric, 0)
+}</span>
+</pre>
+
+        <pre class="file" id="file11" style="display: none">package collectors
+
+import (
+        "github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
+)
+
+// SimpleCollector 기본적인 메트릭 수집기 구현체입니다.
+type SimpleCollector struct {
+        *BaseCollector
+}
+
+// NewSimpleCollector 새로운 SimpleCollector를 생성합니다.
+func NewSimpleCollector(publisher domain.Publisher) *SimpleCollector <span class="cov8" title="1">{
+        return &amp;SimpleCollector{
+                BaseCollector: NewBaseCollector(publisher),
+        }
+}</span>
+</pre>
+
+        <pre class="file" id="file12" style="display: none">package domain
+
+// BaseMetric 기본 메트릭 구현체입니다.
+type BaseMetric struct {
+        name        string
+        metricType  Type
+        value       Value
+        description string
+}
+
+// NewBaseMetric 새로운 BaseMetric을 생성합니다.
+func NewBaseMetric(name string, metricType Type, value Value, description string) *BaseMetric <span class="cov8"
+                                                                                                    title="1">{
+        return &amp;BaseMetric{
+                name:        name,
+                metricType:  metricType,
+                value:       value,
+                description: description,
+        }
+}</span>
+
+// Name 메트릭의 이름을 반환합니다.
+func (m *BaseMetric) Name() string <span class="cov8" title="1">{
+        return m.name
+}</span>
+
+// Type 메트릭의 타입을 반환합니다.
+func (m *BaseMetric) Type() Type <span class="cov8" title="1">{
+        return m.metricType
+}</span>
+
+// Value 메트릭의 값을 반환합니다.
+func (m *BaseMetric) Value() Value <span class="cov8" title="1">{
+        return m.value
+}</span>
+
+// Description 메트릭의 설명을 반환합니다.
+func (m *BaseMetric) Description() string <span class="cov8" title="1">{
+        return m.description
+}</span>
+</pre>
+
+        <pre class="file" id="file13" style="display: none">package domain
+
+import (
+        "context"
+        "time"
+)
+
+// Type 메트릭의 타입을 나타냅니다.
+type Type string
+
+const (
+        // TypeCounter 카운터 타입 메트릭입니다.
+        TypeCounter Type = "counter"
+        // TypeGauge 게이지 타입 메트릭입니다.
+        TypeGauge Type = "gauge"
+        // TypeHistogram 히스토그램 타입 메트릭입니다.
+        TypeHistogram Type = "histogram"
+        // TypeSummary 요약 타입 메트릭입니다.
+        TypeSummary Type = "summary"
+)
+
+// Value 메트릭의 값을 나타냅니다.
+type Value struct {
+        Raw       float64           `json:"raw"`
+        Labels    map[string]string `json:"labels,omitempty"`
+        Timestamp time.Time         `json:"timestamp"`
+}
+
+// NewValue 새로운 메트릭 값을 생성합니다.
+func NewValue(raw float64, labels map[string]string) Value <span class="cov8" title="1">{
+        return Value{
+                Raw:       raw,
+                Labels:    labels,
+                Timestamp: time.Now(),
+        }
+}</span>
+
+// WithLabel 레이블을 추가한 새로운 Value를 반환합니다.
+func (v Value) WithLabel(key, value string) Value <span class="cov8" title="1">{
+        newLabels := make(map[string]string, len(v.Labels)+1)
+        for k, v := range v.Labels </span><span class="cov8" title="1">{
+                newLabels[k] = v
+        }</span>
+        <span class="cov8" title="1">newLabels[key] = value
+        return Value{
+                Raw:       v.Raw,
+                Labels:    newLabels,
+                Timestamp: v.Timestamp,
+        }</span>
+}
+
+// WithLabels 여러 레이블을 추가한 새로운 Value를 반환합니다.
+func (v Value) WithLabels(labels map[string]string) Value <span class="cov8" title="1">{
+        newLabels := make(map[string]string, len(v.Labels)+len(labels))
+        for k, v := range v.Labels </span><span class="cov8" title="1">{
+                newLabels[k] = v
+        }</span>
+        <span class="cov8" title="1">for k, v := range labels </span><span class="cov8" title="1">{
+                newLabels[k] = v
+        }</span>
+        <span class="cov8" title="1">return Value{
+                Raw:       v.Raw,
+                Labels:    newLabels,
+                Timestamp: v.Timestamp,
+        }</span>
+}
+
+// Metric 메트릭 인터페이스입니다.
+type Metric interface {
+        // Name 메트릭의 이름을 반환합니다.
+        Name() string
+        // Type 메트릭의 타입을 반환합니다.
+        Type() Type
+        // Value 메트릭의 값을 반환합니다.
+        Value() Value
+        // Description 메트릭의 설명을 반환합니다.
+        Description() string
+}
+
+// Collector 메트릭 수집기 인터페이스입니다.
+type Collector interface {
+        // Collect 메트릭을 수집합니다.
+        Collect(ctx context.Context) ([]Metric, error)
+        // AddMetric 메트릭을 추가합니다.
+        AddMetric(metric Metric) error
+        // Reset 수집된 메트릭을 초기화합니다.
+        Reset()
+}
+
+// Publisher 메트릭 이벤트 발행자 인터페이스입니다.
+type Publisher interface {
+        // Publish 메트릭 이벤트를 발행합니다.
+        Publish(ctx context.Context, metrics []Metric) error
+}
+
+// Event 메트릭 이벤트입니다.
+type Event struct {
+        Type      string
+        Metrics   []Metric
+        Timestamp time.Time
+}
+
+const (
+        // TypeMetricCollected 메트릭 수집 이벤트 타입입니다.
+        TypeMetricCollected = "metric.collected"
+)
+</pre>
+
+        <pre class="file" id="file14" style="display: none">package domain
 
 import (
         "context"
@@ -1070,7 +1312,7 @@ type Notifier interface {
 }
 </pre>
 
-        <pre class="file" id="file11" style="display: none">package health
+        <pre class="file" id="file15" style="display: none">package health
 
 import (
         "context"
@@ -1140,7 +1382,7 @@ func (c *SimpleChecker) SetStatus(status Status, err error) <span class="cov8" t
 }</span>
 </pre>
 
-        <pre class="file" id="file12" style="display: none">package metrics
+        <pre class="file" id="file16" style="display: none">package metrics
 
 import (
         "context"
