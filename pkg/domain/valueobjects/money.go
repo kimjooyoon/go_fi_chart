@@ -2,6 +2,19 @@ package valueobjects
 
 import (
 	"fmt"
+	"math"
+)
+
+// RoundingMode는 반올림 정책을 정의합니다.
+type RoundingMode int
+
+const (
+	// RoundDown 내림
+	RoundDown RoundingMode = iota
+	// RoundUp 올림
+	RoundUp
+	// RoundHalfUp 반올림 (0.5 이상이면 올림)
+	RoundHalfUp
 )
 
 // Money 화폐 값을 나타냅니다.
@@ -22,6 +35,26 @@ func NewMoney(amount float64, currency string) (Money, error) {
 		Amount:   amount,
 		Currency: currency,
 	}, nil
+}
+
+// Round 주어진 정밀도와 반올림 정책으로 금액을 반올림합니다.
+func (m Money) Round(precision int, mode RoundingMode) Money {
+	multiplier := math.Pow10(precision)
+	var rounded float64
+
+	switch mode {
+	case RoundDown:
+		rounded = math.Floor(m.Amount*multiplier) / multiplier
+	case RoundUp:
+		rounded = math.Ceil(m.Amount*multiplier) / multiplier
+	case RoundHalfUp:
+		rounded = math.Round(m.Amount*multiplier) / multiplier
+	}
+
+	return Money{
+		Amount:   rounded,
+		Currency: m.Currency,
+	}
 }
 
 // Add 두 Money 값을 더합니다.

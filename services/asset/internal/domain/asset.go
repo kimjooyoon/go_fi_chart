@@ -52,6 +52,33 @@ func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Mon
 	a.UpdatedAt = time.Now()
 }
 
+// Associate는 자산을 다른 통화로 변환합니다.
+func (a *Asset) Associate(targetCurrency string, exchangeRate float64) (*Asset, error) {
+	if targetCurrency == a.Amount.Currency {
+		return a, nil
+	}
+
+	newAmount, err := a.Amount.Multiply(exchangeRate)
+	if err != nil {
+		return nil, err
+	}
+
+	// 금액을 소수점 2자리로 반올림
+	roundedAmount := newAmount.Round(2, valueobjects.RoundHalfUp)
+
+	associatedAsset := &Asset{
+		ID:        uuid.New().String(),
+		UserID:    a.UserID,
+		Type:      a.Type,
+		Name:      a.Name,
+		Amount:    roundedAmount,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	return associatedAsset, nil
+}
+
 // AssetRepository 자산 저장소 인터페이스입니다.
 type AssetRepository interface {
 	Save(ctx context.Context, asset *Asset) error

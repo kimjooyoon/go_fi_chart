@@ -142,6 +142,9 @@ import (
 )
 
 func main() <span class="cov0" title="0">{
+        serverCtx, cancel := context.WithCancel(context.Background())
+        defer cancel()
+
         // 환경 변수 로드
         port := os.Getenv("PORT")
         if port == "" </span><span class="cov0" title="0">{
@@ -158,48 +161,37 @@ func main() <span class="cov0" title="0">{
         handler := api.NewHandler()
         handler.RegisterRoutes(r)
 
+        // 서버 종료 시그널 처리
+        go func() </span><span class="cov0" title="0">{
+                sigChan := make(chan os.Signal, 1)
+                signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+                &lt;-sigChan
+                cancel()
+        }</span>()
+
         // 서버 설정
-        server := &amp;http.Server{
+        <span class="cov0" title="0">server := &amp;http.Server{
                 Addr:              fmt.Sprintf(":%s", port),
                 Handler:           r,
                 ReadHeaderTimeout: 10 * time.Second,
         }
 
         // 서버 시작
-        serverCtx, serverStopCtx := context.WithCancel(context.Background())
-
-        sig := make(chan os.Signal, 1)
-        signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
         go func() </span><span class="cov0" title="0">{
-                &lt;-sig
-
-                // Shutdown signal with grace period of 30 seconds
-                shutdownCtx, _ := context.WithTimeout(serverCtx, 30*time.Second)
-
-                go func() </span><span class="cov0" title="0">{
-                        &lt;-shutdownCtx.Done()
-                        if shutdownCtx.Err() == context.DeadlineExceeded </span><span class="cov0" title="0">{
-                                log.Fatal("graceful shutdown timed out.. forcing exit.")
-                        }</span>
-                }()
-
-                // Trigger graceful shutdown
-                <span class="cov0" title="0">err := server.Shutdown(shutdownCtx)
-                if err != nil </span><span class="cov0" title="0">{
-                        log.Fatal(err)
+                if err := server.ListenAndServe(); err != nil &amp;&amp; err != http.ErrServerClosed </span><span
+                        class="cov0" title="0">{
+                        log.Fatalf("서버 시작 실패: %v", err)
                 }</span>
-                <span class="cov0" title="0">serverStopCtx()</span>
         }()
 
-        // 서버 시작
-        <span class="cov0" title="0">log.Printf("Asset 서비스 시작 (포트: %s)\n", port)
-        err := server.ListenAndServe()
-        if err != nil &amp;&amp; err != http.ErrServerClosed </span><span class="cov0" title="0">{
-                log.Fatal(err)
-        }</span>
+        // 서버 종료 대기
+        <span class="cov0" title="0">&lt;-serverCtx.Done()
+        shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer shutdownCancel()
 
-        // 종료 대기
-        <span class="cov0" title="0">&lt;-serverCtx.Done()</span>
+        if err := server.Shutdown(shutdownCtx); err != nil </span><span class="cov0" title="0">{
+                log.Printf("서버 종료 중 오류 발생: %v", err)
+        }</span>
 }
 </pre>
 
@@ -496,6 +488,33 @@ func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Mon
         a.Amount = amount
         a.UpdatedAt = time.Now()
 }</span>
+
+// Associate는 자산을 다른 통화로 변환합니다.
+func (a *Asset) Associate(targetCurrency string, exchangeRate float64) (*Asset, error) <span class="cov0" title="0">{
+        if targetCurrency == a.Amount.Currency </span><span class="cov0" title="0">{
+                return a, nil
+        }</span>
+
+        <span class="cov0" title="0">newAmount, err := a.Amount.Multiply(exchangeRate)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // 금액을 소수점 2자리로 반올림
+        <span class="cov0" title="0">roundedAmount := newAmount.Round(2, valueobjects.RoundHalfUp)
+
+        associatedAsset := &amp;Asset{
+                ID:        uuid.New().String(),
+                UserID:    a.UserID,
+                Type:      a.Type,
+                Name:      a.Name,
+                Amount:    roundedAmount,
+                CreatedAt: time.Now(),
+                UpdatedAt: time.Now(),
+        }
+
+        return associatedAsset, nil</span>
+}
 
 // AssetRepository 자산 저장소 인터페이스입니다.
 type AssetRepository interface {
