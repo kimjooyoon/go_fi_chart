@@ -3,7 +3,7 @@ package github
 import (
 	"time"
 
-	"github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
+	"github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
 )
 
 // ActionStatus GitHub 액션의 상태를 나타냅니다.
@@ -37,7 +37,7 @@ func NewActionMetric(name string, status ActionStatus, duration time.Duration) A
 }
 
 // ToMetric 액션 메트릭을 일반 메트릭으로 변환합니다.
-func (m ActionMetric) ToMetric() metrics.Metric {
+func (m ActionMetric) ToMetric() domain.Metric {
 	var value float64
 	switch m.Status {
 	case ActionStatusSuccess:
@@ -50,10 +50,10 @@ func (m ActionMetric) ToMetric() metrics.Metric {
 		value = -1
 	}
 
-	return metrics.NewBaseMetric(
+	return domain.NewBaseMetric(
 		m.WorkflowName,
-		metrics.TypeGauge,
-		metrics.NewValue(value, map[string]string{
+		domain.TypeGauge,
+		domain.NewValue(value, map[string]string{
 			"status": string(m.Status),
 		}),
 		"GitHub 액션 실행 상태",
@@ -61,11 +61,11 @@ func (m ActionMetric) ToMetric() metrics.Metric {
 }
 
 // ToDurationMetric 액션 실행 시간 메트릭을 생성합니다.
-func (m ActionMetric) ToDurationMetric() metrics.Metric {
-	return metrics.NewBaseMetric(
+func (m ActionMetric) ToDurationMetric() domain.Metric {
+	return domain.NewBaseMetric(
 		m.WorkflowName+"_duration",
-		metrics.TypeGauge,
-		metrics.NewValue(m.Duration.Seconds(), map[string]string{
+		domain.TypeGauge,
+		domain.NewValue(m.Duration.Seconds(), map[string]string{
 			"action": m.WorkflowName,
 		}),
 		"GitHub 액션 실행 시간 (초)",

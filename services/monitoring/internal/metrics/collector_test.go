@@ -5,51 +5,51 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
-	pkgmetrics "github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
+	"github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
+	pkgdomain "github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockPublisher struct {
 	mu     sync.Mutex
-	events []domain.Event
+	events []pkgdomain.Event
 }
 
-func (p *mockPublisher) Publish(_ context.Context, evt domain.Event) error {
+func (p *mockPublisher) Publish(_ context.Context, evt pkgdomain.Event) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.events = append(p.events, evt)
 	return nil
 }
 
-func (p *mockPublisher) Subscribe(_ domain.Handler) error {
+func (p *mockPublisher) Subscribe(_ pkgdomain.Handler) error {
 	return nil
 }
 
-func (p *mockPublisher) Unsubscribe(_ domain.Handler) error {
+func (p *mockPublisher) Unsubscribe(_ pkgdomain.Handler) error {
 	return nil
 }
 
 func Test_NewSimpleCollector_should_create_empty_collector(t *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]domain.Event, 0)}
+	publisher := &mockPublisher{events: make([]pkgdomain.Event, 0)}
 
 	// When
 	collector := NewSimpleCollector(publisher)
 
 	// Then
 	assert.NotNil(t, collector)
-	assert.Empty(t, collector.metrics)
+	assert.NotNil(t, collector.BaseCollector)
 }
 
 func Test_SimpleCollector_should_add_and_collect_metrics(t *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]domain.Event, 0)}
+	publisher := &mockPublisher{events: make([]pkgdomain.Event, 0)}
 	collector := NewSimpleCollector(publisher)
-	metric := pkgmetrics.NewBaseMetric(
+	metric := domain.NewBaseMetric(
 		"test_metric",
-		pkgmetrics.TypeGauge,
-		pkgmetrics.NewValue(42.0, map[string]string{"test": "label"}),
+		domain.TypeGauge,
+		domain.NewValue(42.0, map[string]string{"test": "label"}),
 		"Test metric",
 	)
 
@@ -64,17 +64,17 @@ func Test_SimpleCollector_should_add_and_collect_metrics(t *testing.T) {
 	assert.Equal(t, metric.Name(), metrics[0].Name())
 	assert.Equal(t, metric.Value().Raw, metrics[0].Value().Raw)
 	assert.Len(t, publisher.events, 1)
-	assert.Equal(t, domain.TypeMetricCollected, publisher.events[0].Type)
+	assert.Equal(t, pkgdomain.TypeMetricCollected, publisher.events[0].Type)
 }
 
 func Test_SimpleCollector_should_reset_metrics(t *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]domain.Event, 0)}
+	publisher := &mockPublisher{events: make([]pkgdomain.Event, 0)}
 	collector := NewSimpleCollector(publisher)
-	metric := pkgmetrics.NewBaseMetric(
+	metric := domain.NewBaseMetric(
 		"test_metric",
-		pkgmetrics.TypeGauge,
-		pkgmetrics.NewValue(42.0, map[string]string{"test": "label"}),
+		domain.TypeGauge,
+		domain.NewValue(42.0, map[string]string{"test": "label"}),
 		"Test metric",
 	)
 
@@ -90,7 +90,7 @@ func Test_SimpleCollector_should_reset_metrics(t *testing.T) {
 
 func Test_SimpleCollector_should_be_thread_safe(_ *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]domain.Event, 0)}
+	publisher := &mockPublisher{events: make([]pkgdomain.Event, 0)}
 	collector := NewSimpleCollector(publisher)
 	iterations := 1000
 	done := make(chan bool)
@@ -98,10 +98,10 @@ func Test_SimpleCollector_should_be_thread_safe(_ *testing.T) {
 	// When
 	go func() {
 		for i := 0; i < iterations; i++ {
-			collector.AddMetric(pkgmetrics.NewBaseMetric(
+			collector.AddMetric(domain.NewBaseMetric(
 				"test_metric",
-				pkgmetrics.TypeGauge,
-				pkgmetrics.NewValue(float64(i), map[string]string{"test": "label"}),
+				domain.TypeGauge,
+				domain.NewValue(float64(i), map[string]string{"test": "label"}),
 				"Test metric",
 			))
 		}

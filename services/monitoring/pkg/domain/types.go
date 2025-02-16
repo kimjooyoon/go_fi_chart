@@ -3,6 +3,8 @@ package domain
 import (
 	"context"
 	"time"
+
+	metricsdomain "github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
 )
 
 // EventType 이벤트 타입입니다.
@@ -42,43 +44,28 @@ type Publisher interface {
 }
 
 // MetricType 메트릭의 타입을 나타냅니다.
-type MetricType string
+type MetricType = metricsdomain.Type
 
 const (
-	TypeCounter   MetricType = "counter"
-	TypeGauge     MetricType = "gauge"
-	TypeHistogram MetricType = "histogram"
-	TypeSummary   MetricType = "summary"
+	TypeCounter   = metricsdomain.TypeCounter
+	TypeGauge     = metricsdomain.TypeGauge
+	TypeHistogram = metricsdomain.TypeHistogram
+	TypeSummary   = metricsdomain.TypeSummary
 )
 
 // MetricValue 메트릭의 값을 나타냅니다.
-type MetricValue struct {
-	Raw       float64
-	Labels    map[string]string
-	Timestamp time.Time
-}
+type MetricValue = metricsdomain.Value
 
 // NewMetricValue 새로운 메트릭 값을 생성합니다.
 func NewMetricValue(raw float64, labels map[string]string) MetricValue {
-	return MetricValue{
-		Raw:       raw,
-		Labels:    labels,
-		Timestamp: time.Now(),
-	}
+	return metricsdomain.NewValue(raw, labels)
 }
 
 // Metric 메트릭 인터페이스입니다.
-type Metric interface {
-	Name() string
-	Type() MetricType
-	Value() MetricValue
-	Description() string
-}
+type Metric = metricsdomain.Metric
 
 // Collector 메트릭 수집기 인터페이스입니다.
-type Collector interface {
-	Collect(ctx context.Context) ([]Metric, error)
-}
+type Collector = metricsdomain.Collector
 
 // AlertLevel 알림의 심각도를 나타냅니다.
 type AlertLevel string

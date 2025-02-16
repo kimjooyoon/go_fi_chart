@@ -5,21 +5,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
-	pkgmetrics "github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
+	"github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
+	pkgdomain "github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 )
 
 // Collector GitHub 메트릭을 수집하는 컬렉터입니다.
 type Collector struct {
 	mu        sync.RWMutex
-	metrics   []pkgmetrics.Metric
-	publisher domain.Publisher
+	metrics   []domain.Metric
+	publisher pkgdomain.Publisher
 }
 
 // NewCollector 새로운 GitHub 메트릭 컬렉터를 생성합니다.
-func NewCollector(publisher domain.Publisher) *Collector {
+func NewCollector(publisher pkgdomain.Publisher) *Collector {
 	return &Collector{
-		metrics:   make([]pkgmetrics.Metric, 0),
+		metrics:   make([]domain.Metric, 0),
 		publisher: publisher,
 	}
 }
@@ -46,19 +46,19 @@ func (c *Collector) AddActionDurationMetric(name string, duration time.Duration)
 }
 
 // Collect 수집된 메트릭을 반환하고 이벤트를 발행합니다.
-func (c *Collector) Collect(ctx context.Context) ([]pkgmetrics.Metric, error) {
+func (c *Collector) Collect(ctx context.Context) ([]domain.Metric, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	metrics := make([]pkgmetrics.Metric, len(c.metrics))
+	metrics := make([]domain.Metric, len(c.metrics))
 	copy(metrics, c.metrics)
 
-	evt := domain.NewMonitoringEvent(domain.TypeMetricCollected, metrics)
+	evt := pkgdomain.NewMonitoringEvent(pkgdomain.TypeMetricCollected, metrics)
 	if err := c.publisher.Publish(ctx, evt); err != nil {
 		return nil, err
 	}
 
-	c.metrics = make([]pkgmetrics.Metric, 0)
+	c.metrics = make([]domain.Metric, 0)
 	return metrics, nil
 }
 
@@ -66,5 +66,5 @@ func (c *Collector) Collect(ctx context.Context) ([]pkgmetrics.Metric, error) {
 func (c *Collector) Reset() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.metrics = make([]pkgmetrics.Metric, 0)
+	c.metrics = make([]domain.Metric, 0)
 }

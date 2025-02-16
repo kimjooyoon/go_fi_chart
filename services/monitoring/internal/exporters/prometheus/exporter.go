@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
+	"github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -25,7 +25,7 @@ func NewExporter() *Exporter {
 }
 
 // Export 메트릭을 Prometheus 형식으로 변환하여 등록합니다.
-func (e *Exporter) Export(_ context.Context, metrics []metrics.Metric) error {
+func (e *Exporter) Export(_ context.Context, metrics []domain.Metric) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -64,7 +64,7 @@ func (e *Exporter) GetRegistry() *prometheus.Registry {
 }
 
 // getOrCreateCollector 메트릭에 대한 Prometheus 컬렉터를 반환하거나 생성합니다.
-func (e *Exporter) getOrCreateCollector(m metrics.Metric) (prometheus.Collector, error) {
+func (e *Exporter) getOrCreateCollector(m domain.Metric) (prometheus.Collector, error) {
 	if collector, exists := e.metrics[m.Name()]; exists {
 		return collector, nil
 	}

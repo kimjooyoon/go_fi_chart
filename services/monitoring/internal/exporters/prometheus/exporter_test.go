@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
+	"github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,17 +23,17 @@ func Test_Exporter_should_export_metrics(t *testing.T) {
 	// Given
 	exporter := NewExporter()
 
-	testMetrics := []metrics.Metric{
-		metrics.NewBaseMetric(
+	testMetrics := []domain.Metric{
+		domain.NewBaseMetric(
 			"test_counter",
-			metrics.TypeCounter,
-			metrics.NewValue(42.0, map[string]string{"label": "value"}),
+			domain.TypeCounter,
+			domain.NewValue(42.0, map[string]string{"label": "value"}),
 			"Test counter metric",
 		),
-		metrics.NewBaseMetric(
+		domain.NewBaseMetric(
 			"test_gauge",
-			metrics.TypeGauge,
-			metrics.NewValue(123.45, map[string]string{"label": "value"}),
+			domain.TypeGauge,
+			domain.NewValue(123.45, map[string]string{"label": "value"}),
 			"Test gauge metric",
 		),
 	}
@@ -59,29 +59,29 @@ func Test_Exporter_should_handle_different_metric_types(t *testing.T) {
 	// Given
 	exporter := NewExporter()
 
-	testMetrics := []metrics.Metric{
-		metrics.NewBaseMetric(
+	testMetrics := []domain.Metric{
+		domain.NewBaseMetric(
 			"test_counter",
-			metrics.TypeCounter,
-			metrics.NewValue(1.0, nil),
+			domain.TypeCounter,
+			domain.NewValue(1.0, nil),
 			"Test counter",
 		),
-		metrics.NewBaseMetric(
+		domain.NewBaseMetric(
 			"test_gauge",
-			metrics.TypeGauge,
-			metrics.NewValue(2.0, nil),
+			domain.TypeGauge,
+			domain.NewValue(2.0, nil),
 			"Test gauge",
 		),
-		metrics.NewBaseMetric(
+		domain.NewBaseMetric(
 			"test_histogram",
-			metrics.TypeHistogram,
-			metrics.NewValue(3.0, nil),
+			domain.TypeHistogram,
+			domain.NewValue(3.0, nil),
 			"Test histogram",
 		),
-		metrics.NewBaseMetric(
+		domain.NewBaseMetric(
 			"test_summary",
-			metrics.TypeSummary,
-			metrics.NewValue(4.0, nil),
+			domain.TypeSummary,
+			domain.NewValue(4.0, nil),
 			"Test summary",
 		),
 	}
@@ -102,24 +102,24 @@ func Test_Exporter_should_update_existing_metrics(t *testing.T) {
 	// Given
 	exporter := NewExporter()
 
-	metric := metrics.NewBaseMetric(
+	metric := domain.NewBaseMetric(
 		"test_counter",
-		metrics.TypeCounter,
-		metrics.NewValue(1.0, nil),
+		domain.TypeCounter,
+		domain.NewValue(1.0, nil),
 		"Test counter",
 	)
 
 	// When
-	err := exporter.Export(context.Background(), []metrics.Metric{metric})
+	err := exporter.Export(context.Background(), []domain.Metric{metric})
 	assert.NoError(t, err)
 
-	metric = metrics.NewBaseMetric(
+	metric = domain.NewBaseMetric(
 		"test_counter",
-		metrics.TypeCounter,
-		metrics.NewValue(2.0, nil),
+		domain.TypeCounter,
+		domain.NewValue(2.0, nil),
 		"Test counter",
 	)
-	err = exporter.Export(context.Background(), []metrics.Metric{metric})
+	err = exporter.Export(context.Background(), []domain.Metric{metric})
 
 	// Then
 	assert.NoError(t, err)
@@ -136,15 +136,15 @@ func Test_Exporter_should_update_existing_metrics(t *testing.T) {
 
 type invalidMetric struct {
 	name        string
-	metricType  metrics.Type
-	value       metrics.Value
+	metricType  domain.Type
+	value       domain.Value
 	description string
 }
 
-func (m *invalidMetric) Name() string         { return m.name }
-func (m *invalidMetric) Type() metrics.Type   { return "invalid" }
-func (m *invalidMetric) Value() metrics.Value { return m.value }
-func (m *invalidMetric) Description() string  { return m.description }
+func (m *invalidMetric) Name() string        { return m.name }
+func (m *invalidMetric) Type() domain.Type   { return "invalid" }
+func (m *invalidMetric) Value() domain.Value { return m.value }
+func (m *invalidMetric) Description() string { return m.description }
 
 func Test_Exporter_should_handle_invalid_metric_type(t *testing.T) {
 	// Given
@@ -153,12 +153,12 @@ func Test_Exporter_should_handle_invalid_metric_type(t *testing.T) {
 	metric := &invalidMetric{
 		name:        "test_invalid",
 		metricType:  "invalid",
-		value:       metrics.NewValue(1.0, nil),
+		value:       domain.NewValue(1.0, nil),
 		description: "Test invalid metric",
 	}
 
 	// When
-	err := exporter.Export(context.Background(), []metrics.Metric{metric})
+	err := exporter.Export(context.Background(), []domain.Metric{metric})
 
 	// Then
 	assert.Error(t, err)
@@ -169,15 +169,15 @@ func Test_Exporter_should_handle_duplicate_registration(t *testing.T) {
 	// Given
 	exporter := NewExporter()
 
-	metric := metrics.NewBaseMetric(
+	metric := domain.NewBaseMetric(
 		"test_counter",
-		metrics.TypeCounter,
-		metrics.NewValue(1.0, nil),
+		domain.TypeCounter,
+		domain.NewValue(1.0, nil),
 		"Test counter",
 	)
 
 	// When
-	err := exporter.Export(context.Background(), []metrics.Metric{metric})
+	err := exporter.Export(context.Background(), []domain.Metric{metric})
 	assert.NoError(t, err)
 
 	// Try to register a different collector with the same name
@@ -189,4 +189,24 @@ func Test_Exporter_should_handle_duplicate_registration(t *testing.T) {
 	// Then
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "previously registered descriptor")
+}
+
+func TestExporter_Export(t *testing.T) {
+	// 테스트 메트릭 생성
+	metric := domain.NewBaseMetric(
+		"test_metric",
+		domain.TypeGauge,
+		domain.NewValue(42.0, map[string]string{
+			"label1": "value1",
+			"label2": "value2",
+		}),
+		"Test metric description",
+	)
+
+	// 익스포터 생성
+	exporter := NewExporter()
+
+	// 메트릭 익스포트
+	err := exporter.Export(context.Background(), []domain.Metric{metric})
+	assert.NoError(t, err)
 }
