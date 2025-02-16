@@ -60,29 +60,29 @@
 				<option value="file1">github.com/aske/go_fi_chart/internal/domain/asset/id_generator.go (100.0%)</option>
 				
 				<option value="file2">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go (76.0%)</option>
-				
-				<option value="file3">github.com/aske/go_fi_chart/internal/domain/asset/model.go (20.0%)</option>
+
+                        <option value="file3">github.com/aske/go_fi_chart/internal/domain/asset/model.go (100.0%)
+                        </option>
 				
 				<option value="file4">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go (100.0%)</option>
 				
 				<option value="file5">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
-				
-				</select>
+
+                        <option value="file6">
+                                github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (100.0%)
+                        </option>
+
+                        <option value="file7">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                                (100.0%)
+                        </option>
+
+                </select>
 			</div>
 			<div id="legend">
 				<span>not tracked</span>
-			
-				<span class="cov0">no coverage</span>
-				<span class="cov1">low coverage</span>
-				<span class="cov2">*</span>
-				<span class="cov3">*</span>
-				<span class="cov4">*</span>
-				<span class="cov5">*</span>
-				<span class="cov6">*</span>
-				<span class="cov7">*</span>
-				<span class="cov8">*</span>
-				<span class="cov9">*</span>
-				<span class="cov10">high coverage</span>
+
+                    <span class="cov0">not covered</span>
+                    <span class="cov8">covered</span>
 			
 			</div>
 		</div>
@@ -128,7 +128,7 @@ import (
 // generateID는 UUID v4를 사용하여 고유한 ID를 생성합니다.
 // UUID v4는 랜덤하게 생성되며, 충돌 가능성이 극히 낮습니다.
 // 또한 내부적으로 동시성을 지원하므로 별도의 동기화가 필요하지 않습니다.
-func generateID() string <span class="cov10" title="2002">{
+func generateID() string <span class="cov8" title="1">{
         return uuid.New().String()
 }</span>
 </pre>
@@ -151,14 +151,14 @@ type MemoryRepository[T domain.Entity] struct {
 }
 
 // NewMemoryRepository 새로운 인메모리 저장소를 생성합니다.
-func NewMemoryRepository[T domain.Entity]() *MemoryRepository[T] <span class="cov8" title="12">{
+func NewMemoryRepository[T domain.Entity]() *MemoryRepository[T] <span class="cov8" title="1">{
         return &amp;MemoryRepository[T]{
                 data: make(map[string]T),
         }
 }</span>
 
 // Save 엔티티를 저장합니다.
-func (r *MemoryRepository[T]) Save(_ context.Context, entity T) error <span class="cov10" title="20">{
+func (r *MemoryRepository[T]) Save(_ context.Context, entity T) error <span class="cov8" title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
@@ -166,25 +166,25 @@ func (r *MemoryRepository[T]) Save(_ context.Context, entity T) error <span clas
                 return domain.NewRepositoryError("Save", fmt.Errorf("entity with ID %s already exists", entity.GetID()))
         }</span>
 
-        <span class="cov10" title="20">r.data[entity.GetID()] = entity
+        <span class="cov8" title="1">r.data[entity.GetID()] = entity
         return nil</span>
 }
 
 // FindByID ID로 엔티티를 조회합니다.
-func (r *MemoryRepository[T]) FindByID(_ context.Context, id string) (T, error) <span class="cov6" title="7">{
+func (r *MemoryRepository[T]) FindByID(_ context.Context, id string) (T, error) <span class="cov8" title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
-        if entity, exists := r.data[id]; exists </span><span class="cov6" title="6">{
+        if entity, exists := r.data[id]; exists </span><span class="cov8" title="1">{
                 return entity, nil
         }</span>
 
-        <span class="cov1" title="1">var zero T
+        <span class="cov8" title="1">var zero T
         return zero, domain.NewRepositoryError("FindByID", fmt.Errorf("entity with ID %s not found", id))</span>
 }
 
 // Update 엔티티를 업데이트합니다.
-func (r *MemoryRepository[T]) Update(_ context.Context, entity T) error <span class="cov1" title="1">{
+func (r *MemoryRepository[T]) Update(_ context.Context, entity T) error <span class="cov8" title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
@@ -192,12 +192,12 @@ func (r *MemoryRepository[T]) Update(_ context.Context, entity T) error <span cl
                 return domain.NewRepositoryError("Update", fmt.Errorf("entity with ID %s not found", entity.GetID()))
         }</span>
 
-        <span class="cov1" title="1">r.data[entity.GetID()] = entity
+        <span class="cov8" title="1">r.data[entity.GetID()] = entity
         return nil</span>
 }
 
 // Delete ID로 엔티티를 삭제합니다.
-func (r *MemoryRepository[T]) Delete(_ context.Context, id string) error <span class="cov1" title="1">{
+func (r *MemoryRepository[T]) Delete(_ context.Context, id string) error <span class="cov8" title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
@@ -205,7 +205,7 @@ func (r *MemoryRepository[T]) Delete(_ context.Context, id string) error <span c
                 return domain.NewRepositoryError("Delete", fmt.Errorf("entity with ID %s not found", id))
         }</span>
 
-        <span class="cov1" title="1">delete(r.data, id)
+        <span class="cov8" title="1">delete(r.data, id)
         return nil</span>
 }
 
@@ -232,7 +232,6 @@ func (r *MemoryRepository[T]) FindOne(_ context.Context, _ domain.SearchCriteria
 
 // WithTransaction 트랜잭션을 실행합니다.
 func (r *MemoryRepository[T]) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error <span class="cov0" title="0">{
-        // 인메모리 저장소는 트랜잭션을 지원하지 않으므로, 함수를 바로 실행합니다.
         return fn(ctx)
 }</span>
 
@@ -242,42 +241,45 @@ type MemoryAssetRepository struct {
 }
 
 // NewMemoryAssetRepository 새로운 Asset 인메모리 저장소를 생성합니다.
-func NewMemoryAssetRepository() *MemoryAssetRepository <span class="cov6" title="6">{
+func NewMemoryAssetRepository() *MemoryAssetRepository <span class="cov8" title="1">{
         return &amp;MemoryAssetRepository{
                 MemoryRepository: NewMemoryRepository[*Asset](),
         }
 }</span>
 
 // FindByUserID 사용자 ID로 Asset 목록을 조회합니다.
-func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) <span class="cov1" title="1">{
+func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) <span class="cov8"
+                                                                                                       title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
         var result []*Asset
-        for _, asset := range r.data </span><span class="cov4" title="3">{
-                if asset.UserID == userID </span><span class="cov4" title="3">{
+        for _, asset := range r.data </span><span class="cov8" title="1">{
+                if asset.UserID == userID </span><span class="cov8" title="1">{
                         result = append(result, asset)
                 }</span>
         }
-        <span class="cov1" title="1">return result, nil</span>
+        <span class="cov8" title="1">return result, nil</span>
 }
 
 // FindByType Asset 유형으로 Asset 목록을 조회합니다.
-func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([]*Asset, error) <span class="cov1" title="1">{
+func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([]*Asset, error) <span class="cov8"
+                                                                                                      title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
         var result []*Asset
-        for _, asset := range r.data </span><span class="cov4" title="3">{
-                if asset.Type == assetType </span><span class="cov1" title="1">{
+        for _, asset := range r.data </span><span class="cov8" title="1">{
+                if asset.Type == assetType </span><span class="cov8" title="1">{
                         result = append(result, asset)
                 }</span>
         }
-        <span class="cov1" title="1">return result, nil</span>
+        <span class="cov8" title="1">return result, nil</span>
 }
 
 // UpdateAmount Asset의 금액을 업데이트합니다.
-func (r *MemoryAssetRepository) UpdateAmount(ctx context.Context, id string, amount float64) error <span class="cov1" title="1">{
+func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amount float64) error <span class="cov8"
+                                                                                                       title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
@@ -286,7 +288,7 @@ func (r *MemoryAssetRepository) UpdateAmount(ctx context.Context, id string, amo
                 return domain.NewRepositoryError("UpdateAmount", fmt.Errorf("asset with ID %s not found", id))
         }</span>
 
-        <span class="cov1" title="1">asset.Amount = amount
+        <span class="cov8" title="1">asset.Amount = amount
         asset.UpdatedAt = time.Now()
         r.data[id] = asset
         return nil</span>
@@ -298,14 +300,15 @@ type MemoryTransactionRepository struct {
 }
 
 // NewMemoryTransactionRepository 새로운 Transaction 인메모리 저장소를 생성합니다.
-func NewMemoryTransactionRepository() *MemoryTransactionRepository <span class="cov4" title="3">{
+func NewMemoryTransactionRepository() *MemoryTransactionRepository <span class="cov8" title="1">{
         return &amp;MemoryTransactionRepository{
                 MemoryRepository: NewMemoryRepository[*Transaction](),
         }
 }</span>
 
 // FindByAssetID 자산 ID로 Transaction 목록을 조회합니다.
-func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID string) ([]*Transaction, error) <span class="cov0" title="0">{
+func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID string) ([]*Transaction, error) <span
+                        class="cov0" title="0">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
@@ -319,38 +322,41 @@ func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID
 }
 
 // FindByDateRange 날짜 범위로 Transaction 목록을 조회합니다.
-func (r *MemoryTransactionRepository) FindByDateRange(ctx context.Context, start, end time.Time) ([]*Transaction, error) <span class="cov1" title="1">{
+func (r *MemoryTransactionRepository) FindByDateRange(_ context.Context, start, end time.Time) ([]*Transaction, error) <span
+                        class="cov8" title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
         var result []*Transaction
-        for _, tx := range r.data </span><span class="cov4" title="3">{
-                if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp; (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span class="cov4" title="3">{
+        for _, tx := range r.data </span><span class="cov8" title="1">{
+                if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp; (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span
+                        class="cov8" title="1">{
                         result = append(result, tx)
                 }</span>
         }
-        <span class="cov1" title="1">return result, nil</span>
+        <span class="cov8" title="1">return result, nil</span>
 }
 
 // GetTotalAmount 자산 ID에 대한 총 거래 금액을 계산합니다.
-func (r *MemoryTransactionRepository) GetTotalAmount(ctx context.Context, assetID string) (float64, error) <span class="cov1" title="1">{
+func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (float64, error) <span
+                        class="cov8" title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
         var total float64
-        for _, tx := range r.data </span><span class="cov4" title="3">{
-                if tx.AssetID == assetID </span><span class="cov3" title="2">{
+        for _, tx := range r.data </span><span class="cov8" title="1">{
+                if tx.AssetID == assetID </span><span class="cov8" title="1">{
                         switch tx.Type </span>{
-                        case Income:<span class="cov1" title="1">
+                        case Income:<span class="cov8" title="1">
                                 total += tx.Amount</span>
-                        case Expense:<span class="cov1" title="1">
+                        case Expense:<span class="cov8" title="1">
                                 total -= tx.Amount</span>
                         case Transfer:<span class="cov0" title="0"></span>
                                 // Transfer는 별도 처리 필요
                         }
                 }
         }
-        <span class="cov1" title="1">return total, nil</span>
+        <span class="cov8" title="1">return total, nil</span>
 }
 
 // MemoryPortfolioRepository Portfolio 도메인의 인메모리 저장소
@@ -359,19 +365,20 @@ type MemoryPortfolioRepository struct {
 }
 
 // NewMemoryPortfolioRepository 새로운 Portfolio 인메모리 저장소를 생성합니다.
-func NewMemoryPortfolioRepository() *MemoryPortfolioRepository <span class="cov4" title="3">{
+func NewMemoryPortfolioRepository() *MemoryPortfolioRepository <span class="cov8" title="1">{
         return &amp;MemoryPortfolioRepository{
                 MemoryRepository: NewMemoryRepository[*Portfolio](),
         }
 }</span>
 
 // FindByUserID 사용자 ID로 Portfolio를 조회합니다.
-func (r *MemoryPortfolioRepository) FindByUserID(ctx context.Context, userID string) (*Portfolio, error) <span class="cov1" title="1">{
+func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID string) (*Portfolio, error) <span
+                        class="cov8" title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
-        for _, portfolio := range r.data </span><span class="cov1" title="1">{
-                if portfolio.UserID == userID </span><span class="cov1" title="1">{
+        for _, portfolio := range r.data </span><span class="cov8" title="1">{
+                if portfolio.UserID == userID </span><span class="cov8" title="1">{
                         return portfolio, nil
                 }</span>
         }
@@ -379,7 +386,8 @@ func (r *MemoryPortfolioRepository) FindByUserID(ctx context.Context, userID str
 }
 
 // UpdateAssets Portfolio의 자산 구성을 업데이트합니다.
-func (r *MemoryPortfolioRepository) UpdateAssets(ctx context.Context, id string, assets []PortfolioAsset) error <span class="cov1" title="1">{
+func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, assets []PortfolioAsset) error <span
+                        class="cov8" title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
@@ -388,7 +396,7 @@ func (r *MemoryPortfolioRepository) UpdateAssets(ctx context.Context, id string,
                 return domain.NewRepositoryError("UpdateAssets", fmt.Errorf("portfolio with ID %s not found", id))
         }</span>
 
-        <span class="cov1" title="1">portfolio.Assets = assets
+        <span class="cov8" title="1">portfolio.Assets = assets
         portfolio.UpdatedAt = time.Now()
         r.data[id] = portfolio
         return nil</span>
@@ -401,7 +409,6 @@ import (
         "time"
 )
 
-// Asset 자산을 나타내는 루트 엔티티
 type Asset struct {
         ID           string
         UserID       string
@@ -413,20 +420,18 @@ type Asset struct {
         Transactions []Transaction
 }
 
-// Entity 인터페이스 구현
-func (a *Asset) GetID() string <span class="cov10" title="22">{
+func (a *Asset) GetID() string <span class="cov8" title="1">{
         return a.ID
 }</span>
 
-func (a *Asset) GetCreatedAt() time.Time <span class="cov0" title="0">{
+func (a *Asset) GetCreatedAt() time.Time <span class="cov8" title="1">{
         return a.CreatedAt
 }</span>
 
-func (a *Asset) GetUpdatedAt() time.Time <span class="cov0" title="0">{
+func (a *Asset) GetUpdatedAt() time.Time <span class="cov8" title="1">{
         return a.UpdatedAt
 }</span>
 
-// Type 자산 유형
 type Type string
 
 const (
@@ -437,7 +442,6 @@ const (
         Crypto     Type = "CRYPTO"
 )
 
-// Transaction 거래 내역
 type Transaction struct {
         ID          string
         AssetID     string
@@ -449,20 +453,18 @@ type Transaction struct {
         CreatedAt   time.Time
 }
 
-// Entity 인터페이스 구현
-func (t *Transaction) GetID() string <span class="cov8" title="14">{
+func (t *Transaction) GetID() string <span class="cov8" title="1">{
         return t.ID
 }</span>
 
-func (t *Transaction) GetCreatedAt() time.Time <span class="cov0" title="0">{
+func (t *Transaction) GetCreatedAt() time.Time <span class="cov8" title="1">{
         return t.CreatedAt
 }</span>
 
-func (t *Transaction) GetUpdatedAt() time.Time <span class="cov0" title="0">{
-        return t.Date // Transaction은 수정되지 않으므로 Date를 UpdatedAt으로 사용
+func (t *Transaction) GetUpdatedAt() time.Time <span class="cov8" title="1">{
+        return t.Date
 }</span>
 
-// TransactionType 거래 유형
 type TransactionType string
 
 const (
@@ -471,7 +473,6 @@ const (
         Transfer TransactionType = "TRANSFER"
 )
 
-// Portfolio 포트폴리오 구성
 type Portfolio struct {
         ID        string
         UserID    string
@@ -480,16 +481,15 @@ type Portfolio struct {
         UpdatedAt time.Time
 }
 
-// Entity 인터페이스 구현
-func (p *Portfolio) GetID() string <span class="cov6" title="6">{
+func (p *Portfolio) GetID() string <span class="cov8" title="1">{
         return p.ID
 }</span>
 
-func (p *Portfolio) GetCreatedAt() time.Time <span class="cov0" title="0">{
+func (p *Portfolio) GetCreatedAt() time.Time <span class="cov8" title="1">{
         return p.CreatedAt
 }</span>
 
-func (p *Portfolio) GetUpdatedAt() time.Time <span class="cov0" title="0">{
+func (p *Portfolio) GetUpdatedAt() time.Time <span class="cov8" title="1">{
         return p.UpdatedAt
 }</span>
 
@@ -499,8 +499,7 @@ type PortfolioAsset struct {
         Weight  float64
 }
 
-// NewAsset 새로운 Asset 생성
-func NewAsset(userID string, assetType Type, name string, amount float64) *Asset <span class="cov0" title="0">{
+func NewAsset(userID string, assetType Type, name string, amount float64) *Asset <span class="cov8" title="1">{
         now := time.Now()
         return &amp;Asset{
                 ID:        generateID(),
@@ -513,8 +512,8 @@ func NewAsset(userID string, assetType Type, name string, amount float64) *Asset
         }
 }</span>
 
-// NewTransaction 새로운 Transaction 생성
-func NewTransaction(assetID string, transactionType TransactionType, amount float64, category string, description string) *Transaction <span class="cov0" title="0">{
+func NewTransaction(assetID string, transactionType TransactionType, amount float64, category string, description string) *Transaction <span
+                        class="cov8" title="1">{
         now := time.Now()
         return &amp;Transaction{
                 ID:          generateID(),
@@ -528,8 +527,7 @@ func NewTransaction(assetID string, transactionType TransactionType, amount floa
         }
 }</span>
 
-// NewPortfolio 새로운 Portfolio 생성
-func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio <span class="cov0" title="0">{
+func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio <span class="cov8" title="1">{
         now := time.Now()
         return &amp;Portfolio{
                 ID:        generateID(),
@@ -555,7 +553,7 @@ type TestFixture struct {
 }
 
 // NewTestFixture 새로운 테스트 픽스처를 생성합니다.
-func NewTestFixture() *TestFixture <span class="cov10" title="20">{
+func NewTestFixture() *TestFixture <span class="cov8" title="1">{
         now := time.Now()
         userID := "test-user-1"
 
@@ -656,65 +654,65 @@ func NewTestFixture() *TestFixture <span class="cov10" title="20">{
 }</span>
 
 // GetAssetByID 테스트 픽스처에서 ID로 Asset을 찾습니다.
-func (f *TestFixture) GetAssetByID(id string) *Asset <span class="cov3" title="2">{
-        for _, asset := range f.Assets </span><span class="cov5" title="4">{
-                if asset.ID == id </span><span class="cov1" title="1">{
+func (f *TestFixture) GetAssetByID(id string) *Asset <span class="cov8" title="1">{
+        for _, asset := range f.Assets </span><span class="cov8" title="1">{
+                if asset.ID == id </span><span class="cov8" title="1">{
                         return asset
                 }</span>
         }
-        <span class="cov1" title="1">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 
 // GetTransactionByID 테스트 픽스처에서 ID로 Transaction을 찾습니다.
-func (f *TestFixture) GetTransactionByID(id string) *Transaction <span class="cov3" title="2">{
-        for _, tx := range f.Transactions </span><span class="cov5" title="4">{
-                if tx.ID == id </span><span class="cov1" title="1">{
+func (f *TestFixture) GetTransactionByID(id string) *Transaction <span class="cov8" title="1">{
+        for _, tx := range f.Transactions </span><span class="cov8" title="1">{
+                if tx.ID == id </span><span class="cov8" title="1">{
                         return tx
                 }</span>
         }
-        <span class="cov1" title="1">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 
 // GetPortfolioByID 테스트 픽스처에서 ID로 Portfolio를 찾습니다.
-func (f *TestFixture) GetPortfolioByID(id string) *Portfolio <span class="cov3" title="2">{
-        for _, portfolio := range f.Portfolios </span><span class="cov3" title="2">{
-                if portfolio.ID == id </span><span class="cov1" title="1">{
+func (f *TestFixture) GetPortfolioByID(id string) *Portfolio <span class="cov8" title="1">{
+        for _, portfolio := range f.Portfolios </span><span class="cov8" title="1">{
+                if portfolio.ID == id </span><span class="cov8" title="1">{
                         return portfolio
                 }</span>
         }
-        <span class="cov1" title="1">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 
 // GetAssetsByUserID 테스트 픽스처에서 UserID로 Asset 목록을 찾습니다.
-func (f *TestFixture) GetAssetsByUserID(userID string) []*Asset <span class="cov3" title="2">{
+func (f *TestFixture) GetAssetsByUserID(userID string) []*Asset <span class="cov8" title="1">{
         var result []*Asset
-        for _, asset := range f.Assets </span><span class="cov6" title="6">{
-                if asset.UserID == userID </span><span class="cov4" title="3">{
+        for _, asset := range f.Assets </span><span class="cov8" title="1">{
+                if asset.UserID == userID </span><span class="cov8" title="1">{
                         result = append(result, asset)
                 }</span>
         }
-        <span class="cov3" title="2">return result</span>
+        <span class="cov8" title="1">return result</span>
 }
 
 // GetTransactionsByAssetID 테스트 픽스처에서 AssetID로 Transaction 목록을 찾습니다.
-func (f *TestFixture) GetTransactionsByAssetID(assetID string) []*Transaction <span class="cov3" title="2">{
+func (f *TestFixture) GetTransactionsByAssetID(assetID string) []*Transaction <span class="cov8" title="1">{
         var result []*Transaction
-        for _, tx := range f.Transactions </span><span class="cov6" title="6">{
-                if tx.AssetID == assetID </span><span class="cov3" title="2">{
+        for _, tx := range f.Transactions </span><span class="cov8" title="1">{
+                if tx.AssetID == assetID </span><span class="cov8" title="1">{
                         result = append(result, tx)
                 }</span>
         }
-        <span class="cov3" title="2">return result</span>
+        <span class="cov8" title="1">return result</span>
 }
 
 // GetPortfolioByUserID 테스트 픽스처에서 UserID로 Portfolio를 찾습니다.
-func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class="cov3" title="2">{
-        for _, portfolio := range f.Portfolios </span><span class="cov3" title="2">{
-                if portfolio.UserID == userID </span><span class="cov1" title="1">{
+func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class="cov8" title="1">{
+        for _, portfolio := range f.Portfolios </span><span class="cov8" title="1">{
+                if portfolio.UserID == userID </span><span class="cov8" title="1">{
                         return portfolio
                 }</span>
         }
-        <span class="cov1" title="1">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 </pre>
 		
@@ -772,6 +770,148 @@ func NewRepositoryError(op string, err error) error <span class="cov0" title="0"
                 Op:  op,
                 Err: err,
         }
+}</span>
+</pre>
+
+                <pre class="file" id="file6" style="display: none">package metrics
+
+import (
+        "context"
+        "sync"
+        "time"
+)
+
+// MetricType 메트릭의 종류를 나타냅니다.
+type MetricType string
+
+const (
+        TypeGauge   MetricType = "GAUGE"
+        TypeCounter MetricType = "COUNTER"
+)
+
+// Metric 수집된 메트릭을 나타냅니다.
+type Metric struct {
+        Name      string            `json:"name"`
+        Type      MetricType        `json:"type"`
+        Value     float64           `json:"value"`
+        Labels    map[string]string `json:"labels"`
+        Timestamp time.Time         `json:"timestamp"`
+}
+
+// Collector 메트릭을 수집하는 인터페이스입니다.
+type Collector interface {
+        // Collect 메트릭을 수집합니다.
+        Collect(ctx context.Context) ([]Metric, error)
+}
+
+// SimpleCollector 기본적인 메트릭 수집 구현체입니다.
+type SimpleCollector struct {
+        mu      sync.RWMutex
+        metrics []Metric
+}
+
+// NewSimpleCollector 새로운 SimpleCollector를 생성합니다.
+func NewSimpleCollector() *SimpleCollector <span class="cov8" title="1">{
+        return &amp;SimpleCollector{
+                metrics: make([]Metric, 0),
+        }
+}</span>
+
+// Collect 현재 저장된 메트릭을 반환합니다.
+func (c *SimpleCollector) Collect(_ context.Context) ([]Metric, error) <span class="cov8" title="1">{
+        c.mu.RLock()
+        defer c.mu.RUnlock()
+
+        result := make([]Metric, len(c.metrics))
+        copy(result, c.metrics)
+        return result, nil
+}</span>
+
+// AddMetric 새로운 메트릭을 추가합니다.
+func (c *SimpleCollector) AddMetric(metric Metric) <span class="cov8" title="1">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        metric.Timestamp = time.Now()
+        c.metrics = append(c.metrics, metric)
+}</span>
+
+// Reset 저장된 메트릭을 초기화합니다.
+func (c *SimpleCollector) Reset() <span class="cov8" title="1">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        c.metrics = make([]Metric, 0)
+}</span>
+</pre>
+
+                <pre class="file" id="file7" style="display: none">package health
+
+import (
+        "context"
+        "sync"
+        "time"
+)
+
+// Status 서비스의 상태를 나타냅니다.
+type Status string
+
+const (
+        StatusUp   Status = "UP"
+        StatusDown Status = "DOWN"
+)
+
+// Check 헬스 체크 결과를 나타냅니다.
+type Check struct {
+        Status    Status    `json:"status"`
+        Timestamp time.Time `json:"timestamp"`
+        Error     string    `json:"error,omitempty"`
+}
+
+// Checker 서비스 상태를 체크하는 인터페이스입니다.
+type Checker interface {
+        // Check 현재 서비스의 상태를 확인합니다.
+        Check(ctx context.Context) Check
+}
+
+// SimpleChecker 기본적인 상태 체크 구현체입니다.
+type SimpleChecker struct {
+        mu     sync.RWMutex
+        status Status
+        err    error
+}
+
+// NewSimpleChecker 새로운 SimpleChecker를 생성합니다.
+func NewSimpleChecker() *SimpleChecker <span class="cov8" title="1">{
+        return &amp;SimpleChecker{
+                status: StatusUp,
+        }
+}</span>
+
+// Check 현재 서비스의 상태를 반환합니다.
+func (c *SimpleChecker) Check(_ context.Context) Check <span class="cov8" title="1">{
+        c.mu.RLock()
+        defer c.mu.RUnlock()
+
+        var errStr string
+        if c.err != nil </span><span class="cov8" title="1">{
+                errStr = c.err.Error()
+        }</span>
+
+        <span class="cov8" title="1">return Check{
+                Status:    c.status,
+                Timestamp: time.Now(),
+                Error:     errStr,
+        }</span>
+}
+
+// SetStatus 서비스의 상태를 설정합니다.
+func (c *SimpleChecker) SetStatus(status Status, err error) <span class="cov8" title="1">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        c.status = status
+        c.err = err
 }</span>
 </pre>
 		
