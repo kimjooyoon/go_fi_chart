@@ -22,7 +22,7 @@ type TransactionRepository interface {
 
 	FindByAssetID(ctx context.Context, assetID string) ([]*Transaction, error)
 	FindByDateRange(ctx context.Context, start, end time.Time) ([]*Transaction, error)
-	GetTotalAmount(ctx context.Context, assetID string) (float64, error)
+	GetTotalAmount(ctx context.Context, assetID string) (Money, error)
 }
 
 // PortfolioRepository Portfolio 도메인의 저장소 인터페이스

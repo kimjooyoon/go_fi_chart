@@ -31,25 +31,25 @@ func Test_NewAsset_should_create_asset_with_valid_data(t *testing.T) {
 
 func Test_NewTransaction_should_create_transaction_with_valid_data(t *testing.T) {
 	// Given
-	assetID := "asset-1"
-	transactionType := Income
-	amount := 500000.0
+	assetID := "test-asset-1"
+	txType := Income
+	money := NewMoney(500000, "KRW")
 	category := "급여"
 	description := "3월 급여"
 
 	// When
-	tx := NewTransaction(assetID, transactionType, amount, category, description)
+	tx, err := NewTransaction(assetID, txType, money, category, description)
 
 	// Then
+	assert.NoError(t, err)
 	assert.NotEmpty(t, tx.ID)
 	assert.Equal(t, assetID, tx.AssetID)
-	assert.Equal(t, transactionType, tx.Type)
-	assert.Equal(t, amount, tx.Amount)
+	assert.Equal(t, txType, tx.Type)
+	assert.Equal(t, money, tx.Amount)
 	assert.Equal(t, category, tx.Category)
 	assert.Equal(t, description, tx.Description)
-	assert.NotZero(t, tx.Date)
-	assert.NotZero(t, tx.CreatedAt)
-	assert.Equal(t, tx.Date, tx.CreatedAt)
+	assert.False(t, tx.Date.IsZero())
+	assert.False(t, tx.CreatedAt.IsZero())
 }
 
 func Test_NewPortfolio_should_create_portfolio_with_valid_data(t *testing.T) {

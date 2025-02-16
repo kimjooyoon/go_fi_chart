@@ -3,12 +3,63 @@ package asset
 import (
 	"fmt"
 	"time"
+
+	"github.com/aske/go_fi_chart/internal/domain/event"
+	"github.com/google/uuid"
 )
 
 // Money 화폐 값을 나타냅니다.
 type Money struct {
 	Amount   float64
 	Currency string
+}
+
+// NewMoney Money 값 객체를 생성합니다.
+func NewMoney(amount float64, currency string) Money {
+	return Money{
+		Amount:   amount,
+		Currency: currency,
+	}
+}
+
+// Add 두 Money 값을 더합니다.
+func (m Money) Add(other Money) (Money, error) {
+	if m.Currency != other.Currency {
+		return Money{}, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
+	}
+	return Money{
+		Amount:   m.Amount + other.Amount,
+		Currency: m.Currency,
+	}, nil
+}
+
+// Subtract 두 Money 값을 뺍니다.
+func (m Money) Subtract(other Money) (Money, error) {
+	if m.Currency != other.Currency {
+		return Money{}, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
+	}
+	return Money{
+		Amount:   m.Amount - other.Amount,
+		Currency: m.Currency,
+	}, nil
+}
+
+// Multiply Money 값을 주어진 배수로 곱합니다.
+func (m Money) Multiply(multiplier float64) Money {
+	return Money{
+		Amount:   m.Amount * multiplier,
+		Currency: m.Currency,
+	}
+}
+
+// IsZero Money 값이 0인지 확인합니다.
+func (m Money) IsZero() bool {
+	return m.Amount == 0
+}
+
+// IsNegative Money 값이 음수인지 확인합니다.
+func (m Money) IsNegative() bool {
+	return m.Amount < 0
 }
 
 // Performance 자산의 성과를 나타냅니다.
@@ -109,6 +160,7 @@ type Asset struct {
 	Achievements []Achievement
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	events       []event.Event // 미발행 이벤트 저장
 }
 
 func (a *Asset) GetID() string {
@@ -245,40 +297,61 @@ type Transaction struct {
 	ID          string
 	AssetID     string
 	Type        TransactionType
-	Amount      float64
+	Amount      Money
 	Category    string
 	Description string
 	Date        time.Time
 	CreatedAt   time.Time
 }
 
-func (t *Transaction) GetID() string {
-	return t.ID
-}
+// NewTransaction 새로운 Transaction 값 객체를 생성합니다.
+func NewTransaction(assetID string, transactionType TransactionType, amount Money, category string, description string) (*Transaction, error) {
+	if amount.IsZero() {
+		return nil, fmt.Errorf("거래 금액은 0이 될 수 없습니다")
+	}
+	if amount.IsNegative() {
+		return nil, fmt.Errorf("거래 금액은 음수가 될 수 없습니다")
+	}
 
-func (t *Transaction) GetCreatedAt() time.Time {
-	return t.CreatedAt
-}
-
-func (t *Transaction) GetUpdatedAt() time.Time {
-	return t.Date
-}
-
-// NewTransaction 새로운 거래 내역을 생성합니다.
-func NewTransaction(assetID string, txType TransactionType, amount float64, category string, description string) *Transaction {
 	now := time.Now()
 	return &Transaction{
-		ID:          generateID(),
+		ID:          uuid.New().String(),
 		AssetID:     assetID,
-		Type:        txType,
+		Type:        transactionType,
 		Amount:      amount,
 		Category:    category,
 		Description: description,
 		Date:        now,
 		CreatedAt:   now,
-	}
+	}, nil
 }
 
+// GetID 거래의 ID를 반환합니다.
+func (t *Transaction) GetID() string {
+	return t.ID
+}
+
+// GetAmount 거래 금액을 반환합니다.
+func (t *Transaction) GetAmount() Money {
+	return t.Amount
+}
+
+// GetDate 거래 일자를 반환합니다.
+func (t *Transaction) GetDate() time.Time {
+	return t.Date
+}
+
+// GetCreatedAt 거래 생성 일자를 반환합니다.
+func (t *Transaction) GetCreatedAt() time.Time {
+	return t.CreatedAt
+}
+
+// GetUpdatedAt 거래의 업데이트 일자를 반환합니다.
+func (t *Transaction) GetUpdatedAt() time.Time {
+	return t.Date
+}
+
+// Portfolio 포트폴리오를 나타냅니다.
 type Portfolio struct {
 	ID        string
 	UserID    string
@@ -287,19 +360,22 @@ type Portfolio struct {
 	UpdatedAt time.Time
 }
 
+// GetID 포트폴리오의 ID를 반환합니다.
 func (p *Portfolio) GetID() string {
 	return p.ID
 }
 
+// GetCreatedAt 포트폴리오의 생성 일자를 반환합니다.
 func (p *Portfolio) GetCreatedAt() time.Time {
 	return p.CreatedAt
 }
 
+// GetUpdatedAt 포트폴리오의 업데이트 일자를 반환합니다.
 func (p *Portfolio) GetUpdatedAt() time.Time {
 	return p.UpdatedAt
 }
 
-// PortfolioAsset 포트폴리오 내 자산
+// PortfolioAsset 포트폴리오의 자산 구성을 나타냅니다.
 type PortfolioAsset struct {
 	AssetID string
 	Weight  float64
@@ -316,34 +392,63 @@ func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio {
 	}
 }
 
-// ProcessTransaction 거래를 처리하고 자산 금액을 업데이트합니다.
+// AddEvent 새로운 이벤트를 추가합니다.
+func (a *Asset) AddEvent(event event.Event) {
+	a.events = append(a.events, event)
+}
+
+// GetUncommittedEvents 미발행 이벤트 목록을 반환합니다.
+func (a *Asset) GetUncommittedEvents() []event.Event {
+	return a.events
+}
+
+// ClearEvents 미발행 이벤트를 모두 제거합니다.
+func (a *Asset) ClearEvents() {
+	a.events = make([]event.Event, 0)
+}
+
+// ProcessTransaction 거래를 처리하고 이벤트를 발행합니다.
 func (a *Asset) ProcessTransaction(tx *Transaction) error {
+	if err := a.ValidateTransaction(tx); err != nil {
+		return err
+	}
+
 	switch tx.Type {
-	case Income:
-		a.Amount.Amount += tx.Amount
+	case Income, Transfer:
+		a.Amount, _ = a.Amount.Add(tx.Amount)
 	case Expense:
-		if a.Amount.Amount < tx.Amount {
-			return fmt.Errorf("잔액이 부족합니다")
-		}
-		a.Amount.Amount -= tx.Amount
-	case Transfer:
-		// 이체는 별도 처리 필요
-		return nil
-	default:
-		return fmt.Errorf("알 수 없는 거래 유형: %s", tx.Type)
+		a.Amount, _ = a.Amount.Subtract(tx.Amount)
 	}
 
 	a.UpdatedAt = time.Now()
+
+	// 거래 처리 이벤트 발행
+	a.AddEvent(event.NewEvent(
+		"asset.transaction.processed",
+		"asset",
+		map[string]interface{}{
+			"assetId":       a.ID,
+			"transactionId": tx.ID,
+			"type":          tx.Type,
+			"amount":        tx.Amount.Amount,
+			"newBalance":    a.Amount.Amount,
+		},
+	))
+
 	return nil
 }
 
 // ValidateTransaction 거래가 유효한지 검증합니다.
 func (a *Asset) ValidateTransaction(tx *Transaction) error {
-	if tx.Amount <= 0 {
-		return fmt.Errorf("거래 금액은 0보다 커야 합니다")
+	if tx.Amount.IsZero() {
+		return fmt.Errorf("거래 금액은 0이 될 수 없습니다")
 	}
 
-	if tx.Type == Expense && a.Amount.Amount < tx.Amount {
+	if tx.Amount.IsNegative() {
+		return fmt.Errorf("거래 금액은 음수가 될 수 없습니다")
+	}
+
+	if tx.Type == Expense && a.Amount.Amount < tx.Amount.Amount {
 		return fmt.Errorf("잔액이 부족합니다")
 	}
 

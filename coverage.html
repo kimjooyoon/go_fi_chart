@@ -68,57 +68,60 @@
                         </option>
 
                         <option value="file5">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go
-                                (76.0%)
+                                (69.3%)
                         </option>
 
-                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (30.0%)
+                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (34.3%)
                         </option>
 
                         <option value="file7">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go
-                                (100.0%)
+                                (88.2%)
                         </option>
 
                         <option value="file8">github.com/aske/go_fi_chart/internal/domain/error.go (0.0%)</option>
 
                         <option value="file9">github.com/aske/go_fi_chart/internal/domain/event.go (0.0%)</option>
 
-                        <option value="file10">
+                        <option value="file10">github.com/aske/go_fi_chart/internal/domain/event/event.go (0.0%)
+                        </option>
+
+                        <option value="file11">
                                 github.com/aske/go_fi_chart/internal/domain/gamification/memory_repository.go (78.9%)
                         </option>
 
-                        <option value="file11">github.com/aske/go_fi_chart/internal/domain/gamification/model.go
+                        <option value="file12">github.com/aske/go_fi_chart/internal/domain/gamification/model.go
                                 (87.8%)
                         </option>
 
-                        <option value="file12">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
+                        <option value="file13">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
 
-                        <option value="file13">github.com/aske/go_fi_chart/internal/domain/utils.go (0.0%)</option>
+                        <option value="file14">github.com/aske/go_fi_chart/internal/domain/utils.go (0.0%)</option>
 
-                        <option value="file14">github.com/aske/go_fi_chart/internal/infrastructure/events/event.go
+                        <option value="file15">github.com/aske/go_fi_chart/internal/infrastructure/events/event.go
                                 (0.0%)
                         </option>
 
-                        <option value="file15">github.com/aske/go_fi_chart/metrics/github/collector.go (0.0%)</option>
+                        <option value="file16">github.com/aske/go_fi_chart/metrics/github/collector.go (0.0%)</option>
 
-                        <option value="file16">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
+                        <option value="file17">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
                                 (89.5%)
                         </option>
 
-                        <option value="file17">
+                        <option value="file18">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/exporters/prometheus/exporter.go
                                 (93.5%)
                         </option>
 
-                        <option value="file18">
+                        <option value="file19">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (94.1%)
                         </option>
 
-                        <option value="file19">
+                        <option value="file20">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/github/collector.go
                                 (90.5%)
                         </option>
 
-                        <option value="file20">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                        <option value="file21">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
                                 (100.0%)
                         </option>
 
@@ -489,6 +492,7 @@ type CreateTransactionRequest struct {
         AssetID     string  `json:"assetId"`
         Type        string  `json:"type"`
         Amount      float64 `json:"amount"`
+        Currency    string  `json:"currency"`
         Category    string  `json:"category"`
         Description string  `json:"description"`
 }
@@ -498,6 +502,7 @@ type TransactionResponse struct {
         AssetID     string    `json:"assetId"`
         Type        string    `json:"type"`
         Amount      float64   `json:"amount"`
+        Currency    string    `json:"currency"`
         Category    string    `json:"category"`
         Description string    `json:"description"`
         Date        time.Time `json:"date"`
@@ -523,7 +528,8 @@ func (h *Handler) ListTransactions(w http.ResponseWriter, r *http.Request) <span
                         ID:          tx.ID,
                         AssetID:     tx.AssetID,
                         Type:        string(tx.Type),
-                        Amount:      tx.Amount,
+                        Amount:      tx.Amount.Amount,
+                        Currency:    tx.Amount.Currency,
                         Category:    tx.Category,
                         Description: tx.Description,
                         Date:        tx.Date,
@@ -549,16 +555,22 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) <spa
         }</span>
 
         // 거래 생성
-        <span class="cov0" title="0">tx := asset.NewTransaction(
+        <span class="cov0" title="0">money := asset.NewMoney(req.Amount, req.Currency)
+        tx, err := asset.NewTransaction(
                 req.AssetID,
                 asset.TransactionType(req.Type),
-                req.Amount,
+                money,
                 req.Category,
                 req.Description,
         )
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, err.Error())
+                return
+        }</span>
 
         // 거래 유효성 검증
-        if err := targetAsset.ValidateTransaction(tx); err != nil </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">if err := targetAsset.ValidateTransaction(tx); err != nil </span><span class="cov0"
+                                                                                                            title="0">{
                 respondError(w, http.StatusBadRequest, err.Error())
                 return
         }</span>
@@ -589,7 +601,8 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) <spa
                 ID:          tx.ID,
                 AssetID:     tx.AssetID,
                 Type:        string(tx.Type),
-                Amount:      tx.Amount,
+                Amount:      tx.Amount.Amount,
+                Currency:    tx.Amount.Currency,
                 Category:    tx.Category,
                 Description: tx.Description,
                 Date:        tx.Date,
@@ -616,7 +629,8 @@ func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) <span c
                 ID:          tx.ID,
                 AssetID:     tx.AssetID,
                 Type:        string(tx.Type),
-                Amount:      tx.Amount,
+                Amount:      tx.Amount.Amount,
+                Currency:    tx.Amount.Currency,
                 Category:    tx.Category,
                 Description: tx.Description,
                 Date:        tx.Date,
@@ -939,24 +953,44 @@ func (r *MemoryRepository[T]) WithTransaction(ctx context.Context, fn func(ctx c
 
 // MemoryAssetRepository Asset 도메인의 인메모리 저장소
 type MemoryAssetRepository struct {
-        *MemoryRepository[*Asset]
+        repo *MemoryRepository[*Asset]
 }
 
 // NewMemoryAssetRepository 새로운 Asset 인메모리 저장소를 생성합니다.
 func NewMemoryAssetRepository() *MemoryAssetRepository <span class="cov8" title="1">{
         return &amp;MemoryAssetRepository{
-                MemoryRepository: NewMemoryRepository[*Asset](),
+                repo: NewMemoryRepository[*Asset](),
         }
+}</span>
+
+// Save Asset을 저장합니다.
+func (r *MemoryAssetRepository) Save(ctx context.Context, asset *Asset) error <span class="cov8" title="1">{
+        return r.repo.Save(ctx, asset)
+}</span>
+
+// FindByID ID로 Asset을 조회합니다.
+func (r *MemoryAssetRepository) FindByID(ctx context.Context, id string) (*Asset, error) <span class="cov8" title="1">{
+        return r.repo.FindByID(ctx, id)
+}</span>
+
+// Update Asset을 업데이트합니다.
+func (r *MemoryAssetRepository) Update(ctx context.Context, asset *Asset) error <span class="cov8" title="1">{
+        return r.repo.Update(ctx, asset)
+}</span>
+
+// Delete ID로 Asset을 삭제합니다.
+func (r *MemoryAssetRepository) Delete(ctx context.Context, id string) error <span class="cov8" title="1">{
+        return r.repo.Delete(ctx, id)
 }</span>
 
 // FindByUserID 사용자 ID로 Asset 목록을 조회합니다.
 func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) <span class="cov8"
                                                                                                        title="1">{
-        r.mutex.RLock()
-        defer r.mutex.RUnlock()
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
 
         var result []*Asset
-        for _, asset := range r.data </span><span class="cov8" title="1">{
+        for _, asset := range r.repo.data </span><span class="cov8" title="1">{
                 if asset.UserID == userID </span><span class="cov8" title="1">{
                         result = append(result, asset)
                 }</span>
@@ -967,11 +1001,11 @@ func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) (
 // FindByType Asset 유형으로 Asset 목록을 조회합니다.
 func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([]*Asset, error) <span class="cov8"
                                                                                                       title="1">{
-        r.mutex.RLock()
-        defer r.mutex.RUnlock()
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
 
         var result []*Asset
-        for _, asset := range r.data </span><span class="cov8" title="1">{
+        for _, asset := range r.repo.data </span><span class="cov8" title="1">{
                 if asset.Type == assetType </span><span class="cov8" title="1">{
                         result = append(result, asset)
                 }</span>
@@ -982,41 +1016,80 @@ func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([
 // UpdateAmount Asset의 금액을 업데이트합니다.
 func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amount float64) error <span class="cov8"
                                                                                                        title="1">{
-        r.mutex.Lock()
-        defer r.mutex.Unlock()
+        r.repo.mutex.Lock()
+        defer r.repo.mutex.Unlock()
 
-        asset, ok := r.data[id]
+        asset, ok := r.repo.data[id]
         if !ok </span><span class="cov0" title="0">{
                 return domain.NewRepositoryError("UpdateAmount", fmt.Errorf("asset with ID %s not found", id))
         }</span>
 
         <span class="cov8" title="1">asset.Amount = Money{Amount: amount, Currency: asset.Amount.Currency}
         asset.UpdatedAt = time.Now()
-        r.data[id] = asset
+        r.repo.data[id] = asset
 
         return nil</span>
 }
 
-// MemoryTransactionRepository Transaction 도메인의 인메모리 저장소
+// FindAll 검색 조건에 맞는 모든 Asset을 조회합니다.
+func (r *MemoryAssetRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Asset, error) <span
+                                class="cov0" title="0">{
+        return r.repo.FindAll(ctx, criteria)
+}</span>
+
+// FindOne 검색 조건에 맞는 하나의 Asset을 조회합니다.
+func (r *MemoryAssetRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Asset, error) <span
+                                class="cov0" title="0">{
+        return r.repo.FindOne(ctx, criteria)
+}</span>
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryAssetRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error <span
+                                class="cov0" title="0">{
+        return r.repo.WithTransaction(ctx, fn)
+}</span>
+
+// MemoryTransactionRepository Transaction 도메인의 인메모리 저장소 구현체입니다.
 type MemoryTransactionRepository struct {
-        *MemoryRepository[*Transaction]
+        repo *MemoryRepository[*Transaction]
 }
 
-// NewMemoryTransactionRepository 새로운 Transaction 인메모리 저장소를 생성합니다.
+// NewMemoryTransactionRepository 새로운 인메모리 Transaction 저장소를 생성합니다.
 func NewMemoryTransactionRepository() *MemoryTransactionRepository <span class="cov8" title="1">{
         return &amp;MemoryTransactionRepository{
-                MemoryRepository: NewMemoryRepository[*Transaction](),
+                repo: NewMemoryRepository[*Transaction](),
         }
 }</span>
 
-// FindByAssetID 자산 ID로 Transaction 목록을 조회합니다.
+// Save Transaction을 저장합니다.
+func (r *MemoryTransactionRepository) Save(ctx context.Context, tx *Transaction) error <span class="cov8" title="1">{
+        return r.repo.Save(ctx, tx)
+}</span>
+
+// FindByID ID로 Transaction을 조회합니다.
+func (r *MemoryTransactionRepository) FindByID(ctx context.Context, id string) (*Transaction, error) <span class="cov8"
+                                                                                                           title="1">{
+        return r.repo.FindByID(ctx, id)
+}</span>
+
+// Update Transaction을 업데이트합니다.
+func (r *MemoryTransactionRepository) Update(ctx context.Context, tx *Transaction) error <span class="cov0" title="0">{
+        return r.repo.Update(ctx, tx)
+}</span>
+
+// Delete ID로 Transaction을 삭제합니다.
+func (r *MemoryTransactionRepository) Delete(ctx context.Context, id string) error <span class="cov0" title="0">{
+        return r.repo.Delete(ctx, id)
+}</span>
+
+// FindByAssetID AssetID로 Transaction 목록을 조회합니다.
 func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID string) ([]*Transaction, error) <span
                                 class="cov0" title="0">{
-        r.mutex.RLock()
-        defer r.mutex.RUnlock()
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
 
         var result []*Transaction
-        for _, tx := range r.data </span><span class="cov0" title="0">{
+        for _, tx := range r.repo.data </span><span class="cov0" title="0">{
                 if tx.AssetID == assetID </span><span class="cov0" title="0">{
                         result = append(result, tx)
                 }</span>
@@ -1027,60 +1100,106 @@ func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID s
 // FindByDateRange 날짜 범위로 Transaction 목록을 조회합니다.
 func (r *MemoryTransactionRepository) FindByDateRange(_ context.Context, start, end time.Time) ([]*Transaction, error) <span
                                 class="cov8" title="1">{
-        r.mutex.RLock()
-        defer r.mutex.RUnlock()
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
 
         var result []*Transaction
-        for _, tx := range r.data </span><span class="cov8" title="1">{
-                if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp; (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span
-                                class="cov8" title="1">{
+        for _, tx := range r.repo.data </span><span class="cov8" title="1">{
+                if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp;
+                        (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span class="cov8" title="1">{
                         result = append(result, tx)
                 }</span>
         }
         <span class="cov8" title="1">return result, nil</span>
 }
 
-// GetTotalAmount 자산 ID에 대한 총 거래 금액을 계산합니다.
-func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (float64, error) <span
+// GetTotalAmount 특정 기간 동안의 총 거래 금액을 계산합니다.
+func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (Money, error) <span
                                 class="cov8" title="1">{
-        r.mutex.RLock()
-        defer r.mutex.RUnlock()
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
 
-        var total float64
-        for _, tx := range r.data </span><span class="cov8" title="1">{
+        total := Money{Amount: 0, Currency: "KRW"}
+        for _, tx := range r.repo.data </span><span class="cov8" title="1">{
                 if tx.AssetID == assetID </span><span class="cov8" title="1">{
                         switch tx.Type </span>{
                         case Income:<span class="cov8" title="1">
-                                total += tx.Amount</span>
+                                result, err := total.Add(tx.Amount)
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return Money{}, err
+                                }</span>
+                                <span class="cov8" title="1">total = result</span>
                         case Expense:<span class="cov8" title="1">
-                                total -= tx.Amount</span>
-                        case Transfer:<span class="cov0" title="0"></span>
-                                // Transfer는 별도 처리 필요
+                                result, err := total.Subtract(tx.Amount)
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return Money{}, err
+                                }</span>
+                                <span class="cov8" title="1">total = result</span>
                         }
                 }
         }
         <span class="cov8" title="1">return total, nil</span>
 }
 
-// MemoryPortfolioRepository Portfolio 도메인의 인메모리 저장소
+// FindAll 검색 조건에 맞는 모든 Transaction을 조회합니다.
+func (r *MemoryTransactionRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Transaction, error) <span
+                                class="cov0" title="0">{
+        return r.repo.FindAll(ctx, criteria)
+}</span>
+
+// FindOne 검색 조건에 맞는 하나의 Transaction을 조회합니다.
+func (r *MemoryTransactionRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Transaction, error) <span
+                                class="cov0" title="0">{
+        return r.repo.FindOne(ctx, criteria)
+}</span>
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryTransactionRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error <span
+                                class="cov0" title="0">{
+        return r.repo.WithTransaction(ctx, fn)
+}</span>
+
+// MemoryPortfolioRepository Portfolio 도메인의 인메모리 저장소 구현체입니다.
 type MemoryPortfolioRepository struct {
-        *MemoryRepository[*Portfolio]
+        repo *MemoryRepository[*Portfolio]
 }
 
-// NewMemoryPortfolioRepository 새로운 Portfolio 인메모리 저장소를 생성합니다.
+// NewMemoryPortfolioRepository 새로운 인메모리 Portfolio 저장소를 생성합니다.
 func NewMemoryPortfolioRepository() *MemoryPortfolioRepository <span class="cov8" title="1">{
         return &amp;MemoryPortfolioRepository{
-                MemoryRepository: NewMemoryRepository[*Portfolio](),
+                repo: NewMemoryRepository[*Portfolio](),
         }
+}</span>
+
+// Save Portfolio를 저장합니다.
+func (r *MemoryPortfolioRepository) Save(ctx context.Context, portfolio *Portfolio) error <span class="cov8" title="1">{
+        return r.repo.Save(ctx, portfolio)
+}</span>
+
+// FindByID ID로 Portfolio를 조회합니다.
+func (r *MemoryPortfolioRepository) FindByID(ctx context.Context, id string) (*Portfolio, error) <span class="cov8"
+                                                                                                       title="1">{
+        return r.repo.FindByID(ctx, id)
+}</span>
+
+// Update Portfolio를 업데이트합니다.
+func (r *MemoryPortfolioRepository) Update(ctx context.Context, portfolio *Portfolio) error <span class="cov0"
+                                                                                                  title="0">{
+        return r.repo.Update(ctx, portfolio)
+}</span>
+
+// Delete ID로 Portfolio를 삭제합니다.
+func (r *MemoryPortfolioRepository) Delete(ctx context.Context, id string) error <span class="cov0" title="0">{
+        return r.repo.Delete(ctx, id)
 }</span>
 
 // FindByUserID 사용자 ID로 Portfolio를 조회합니다.
 func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID string) (*Portfolio, error) <span
                                 class="cov8" title="1">{
-        r.mutex.RLock()
-        defer r.mutex.RUnlock()
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
 
-        for _, portfolio := range r.data </span><span class="cov8" title="1">{
+        for _, portfolio := range r.repo.data </span><span class="cov8" title="1">{
                 if portfolio.UserID == userID </span><span class="cov8" title="1">{
                         return portfolio, nil
                 }</span>
@@ -1091,19 +1210,38 @@ func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID strin
 // UpdateAssets Portfolio의 자산 구성을 업데이트합니다.
 func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, assets []PortfolioAsset) error <span
                                 class="cov8" title="1">{
-        r.mutex.Lock()
-        defer r.mutex.Unlock()
+        r.repo.mutex.Lock()
+        defer r.repo.mutex.Unlock()
 
-        portfolio, exists := r.data[id]
-        if !exists </span><span class="cov0" title="0">{
+        portfolio, ok := r.repo.data[id]
+        if !ok </span><span class="cov0" title="0">{
                 return domain.NewRepositoryError("UpdateAssets", fmt.Errorf("portfolio with ID %s not found", id))
         }</span>
 
         <span class="cov8" title="1">portfolio.Assets = assets
         portfolio.UpdatedAt = time.Now()
-        r.data[id] = portfolio
+        r.repo.data[id] = portfolio
+
         return nil</span>
 }
+
+// FindAll 검색 조건에 맞는 모든 Portfolio를 조회합니다.
+func (r *MemoryPortfolioRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Portfolio, error) <span
+                                class="cov0" title="0">{
+        return r.repo.FindAll(ctx, criteria)
+}</span>
+
+// FindOne 검색 조건에 맞는 하나의 Portfolio를 조회합니다.
+func (r *MemoryPortfolioRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Portfolio, error) <span
+                                class="cov0" title="0">{
+        return r.repo.FindOne(ctx, criteria)
+}</span>
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryPortfolioRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error <span
+                                class="cov0" title="0">{
+        return r.repo.WithTransaction(ctx, fn)
+}</span>
 </pre>
 
                 <pre class="file" id="file6" style="display: none">package asset
@@ -1111,6 +1249,9 @@ func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, a
 import (
         "fmt"
         "time"
+
+        "github.com/aske/go_fi_chart/internal/domain/event"
+        "github.com/google/uuid"
 )
 
 // Money 화폐 값을 나타냅니다.
@@ -1118,6 +1259,54 @@ type Money struct {
         Amount   float64
         Currency string
 }
+
+// NewMoney Money 값 객체를 생성합니다.
+func NewMoney(amount float64, currency string) Money <span class="cov8" title="1">{
+        return Money{
+                Amount:   amount,
+                Currency: currency,
+        }
+}</span>
+
+// Add 두 Money 값을 더합니다.
+func (m Money) Add(other Money) (Money, error) <span class="cov8" title="1">{
+        if m.Currency != other.Currency </span><span class="cov0" title="0">{
+                return Money{}, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
+        }</span>
+        <span class="cov8" title="1">return Money{
+                Amount:   m.Amount + other.Amount,
+                Currency: m.Currency,
+        }, nil</span>
+}
+
+// Subtract 두 Money 값을 뺍니다.
+func (m Money) Subtract(other Money) (Money, error) <span class="cov8" title="1">{
+        if m.Currency != other.Currency </span><span class="cov0" title="0">{
+                return Money{}, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
+        }</span>
+        <span class="cov8" title="1">return Money{
+                Amount:   m.Amount - other.Amount,
+                Currency: m.Currency,
+        }, nil</span>
+}
+
+// Multiply Money 값을 주어진 배수로 곱합니다.
+func (m Money) Multiply(multiplier float64) Money <span class="cov0" title="0">{
+        return Money{
+                Amount:   m.Amount * multiplier,
+                Currency: m.Currency,
+        }
+}</span>
+
+// IsZero Money 값이 0인지 확인합니다.
+func (m Money) IsZero() bool <span class="cov8" title="1">{
+        return m.Amount == 0
+}</span>
+
+// IsNegative Money 값이 음수인지 확인합니다.
+func (m Money) IsNegative() bool <span class="cov8" title="1">{
+        return m.Amount &lt; 0
+}</span>
 
 // Performance 자산의 성과를 나타냅니다.
 type Performance struct {
@@ -1217,6 +1406,7 @@ type Asset struct {
         Achievements []Achievement
         CreatedAt    time.Time
         UpdatedAt    time.Time
+        events       []event.Event // 미발행 이벤트 저장
 }
 
 func (a *Asset) GetID() string <span class="cov8" title="1">{
@@ -1355,41 +1545,62 @@ type Transaction struct {
         ID          string
         AssetID     string
         Type        TransactionType
-        Amount      float64
+        Amount      Money
         Category    string
         Description string
         Date        time.Time
         CreatedAt   time.Time
 }
 
-func (t *Transaction) GetID() string <span class="cov8" title="1">{
-        return t.ID
-}</span>
-
-func (t *Transaction) GetCreatedAt() time.Time <span class="cov8" title="1">{
-        return t.CreatedAt
-}</span>
-
-func (t *Transaction) GetUpdatedAt() time.Time <span class="cov8" title="1">{
-        return t.Date
-}</span>
-
-// NewTransaction 새로운 거래 내역을 생성합니다.
-func NewTransaction(assetID string, txType TransactionType, amount float64, category string, description string) *Transaction <span
+// NewTransaction 새로운 Transaction 값 객체를 생성합니다.
+func NewTransaction(assetID string, transactionType TransactionType, amount Money, category string, description string) (*Transaction, error) <span
                                 class="cov8" title="1">{
-        now := time.Now()
+        if amount.IsZero() </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("거래 금액은 0이 될 수 없습니다")
+        }</span>
+        <span class="cov8" title="1">if amount.IsNegative() </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("거래 금액은 음수가 될 수 없습니다")
+        }</span>
+
+        <span class="cov8" title="1">now := time.Now()
         return &amp;Transaction{
-                ID:          generateID(),
+                ID:          uuid.New().String(),
                 AssetID:     assetID,
-                Type:        txType,
+                Type:        transactionType,
                 Amount:      amount,
                 Category:    category,
                 Description: description,
                 Date:        now,
                 CreatedAt:   now,
-        }
+        }, nil</span>
+}
+
+// GetID 거래의 ID를 반환합니다.
+func (t *Transaction) GetID() string <span class="cov8" title="1">{
+        return t.ID
 }</span>
 
+// GetAmount 거래 금액을 반환합니다.
+func (t *Transaction) GetAmount() Money <span class="cov0" title="0">{
+        return t.Amount
+}</span>
+
+// GetDate 거래 일자를 반환합니다.
+func (t *Transaction) GetDate() time.Time <span class="cov0" title="0">{
+        return t.Date
+}</span>
+
+// GetCreatedAt 거래 생성 일자를 반환합니다.
+func (t *Transaction) GetCreatedAt() time.Time <span class="cov8" title="1">{
+        return t.CreatedAt
+}</span>
+
+// GetUpdatedAt 거래의 업데이트 일자를 반환합니다.
+func (t *Transaction) GetUpdatedAt() time.Time <span class="cov8" title="1">{
+        return t.Date
+}</span>
+
+// Portfolio 포트폴리오를 나타냅니다.
 type Portfolio struct {
         ID        string
         UserID    string
@@ -1398,19 +1609,22 @@ type Portfolio struct {
         UpdatedAt time.Time
 }
 
+// GetID 포트폴리오의 ID를 반환합니다.
 func (p *Portfolio) GetID() string <span class="cov8" title="1">{
         return p.ID
 }</span>
 
+// GetCreatedAt 포트폴리오의 생성 일자를 반환합니다.
 func (p *Portfolio) GetCreatedAt() time.Time <span class="cov8" title="1">{
         return p.CreatedAt
 }</span>
 
+// GetUpdatedAt 포트폴리오의 업데이트 일자를 반환합니다.
 func (p *Portfolio) GetUpdatedAt() time.Time <span class="cov8" title="1">{
         return p.UpdatedAt
 }</span>
 
-// PortfolioAsset 포트폴리오 내 자산
+// PortfolioAsset 포트폴리오의 자산 구성을 나타냅니다.
 type PortfolioAsset struct {
         AssetID string
         Weight  float64
@@ -1427,34 +1641,63 @@ func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio <span class
         }
 }</span>
 
-// ProcessTransaction 거래를 처리하고 자산 금액을 업데이트합니다.
+// AddEvent 새로운 이벤트를 추가합니다.
+func (a *Asset) AddEvent(event event.Event) <span class="cov0" title="0">{
+        a.events = append(a.events, event)
+}</span>
+
+// GetUncommittedEvents 미발행 이벤트 목록을 반환합니다.
+func (a *Asset) GetUncommittedEvents() []event.Event <span class="cov0" title="0">{
+        return a.events
+}</span>
+
+// ClearEvents 미발행 이벤트를 모두 제거합니다.
+func (a *Asset) ClearEvents() <span class="cov0" title="0">{
+        a.events = make([]event.Event, 0)
+}</span>
+
+// ProcessTransaction 거래를 처리하고 이벤트를 발행합니다.
 func (a *Asset) ProcessTransaction(tx *Transaction) error <span class="cov0" title="0">{
-        switch tx.Type </span>{
-        case Income:<span class="cov0" title="0">
-                a.Amount.Amount += tx.Amount</span>
+        if err := a.ValidateTransaction(tx); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">switch tx.Type </span>{
+        case Income, Transfer:<span class="cov0" title="0">
+                a.Amount, _ = a.Amount.Add(tx.Amount)</span>
         case Expense:<span class="cov0" title="0">
-                if a.Amount.Amount &lt; tx.Amount </span><span class="cov0" title="0">{
-                        return fmt.Errorf("잔액이 부족합니다")
-                }</span>
-                <span class="cov0" title="0">a.Amount.Amount -= tx.Amount</span>
-        case Transfer:<span class="cov0" title="0">
-                // 이체는 별도 처리 필요
-                return nil</span>
-        default:<span class="cov0" title="0">
-                return fmt.Errorf("알 수 없는 거래 유형: %s", tx.Type)</span>
+                a.Amount, _ = a.Amount.Subtract(tx.Amount)</span>
         }
 
         <span class="cov0" title="0">a.UpdatedAt = time.Now()
+
+        // 거래 처리 이벤트 발행
+        a.AddEvent(event.NewEvent(
+                "asset.transaction.processed",
+                "asset",
+                map[string]interface{}{
+                        "assetId":       a.ID,
+                        "transactionId": tx.ID,
+                        "type":          tx.Type,
+                        "amount":        tx.Amount.Amount,
+                        "newBalance":    a.Amount.Amount,
+                },
+        ))
+
         return nil</span>
 }
 
 // ValidateTransaction 거래가 유효한지 검증합니다.
 func (a *Asset) ValidateTransaction(tx *Transaction) error <span class="cov0" title="0">{
-        if tx.Amount &lt;= 0 </span><span class="cov0" title="0">{
-                return fmt.Errorf("거래 금액은 0보다 커야 합니다")
+        if tx.Amount.IsZero() </span><span class="cov0" title="0">{
+                return fmt.Errorf("거래 금액은 0이 될 수 없습니다")
         }</span>
 
-        <span class="cov0" title="0">if tx.Type == Expense &amp;&amp; a.Amount.Amount &lt; tx.Amount </span><span
+        <span class="cov0" title="0">if tx.Amount.IsNegative() </span><span class="cov0" title="0">{
+                return fmt.Errorf("거래 금액은 음수가 될 수 없습니다")
+        }</span>
+
+        <span class="cov0" title="0">if tx.Type == Expense &amp;&amp; a.Amount.Amount &lt; tx.Amount.Amount </span><span
                                 class="cov0" title="0">{
                 return fmt.Errorf("잔액이 부족합니다")
         }</span>
@@ -1513,7 +1756,7 @@ func NewTestFixture() *TestFixture <span class="cov8" title="1">{
                         ID:          "tx-1",
                         AssetID:     assets[0].ID,
                         Type:        Income,
-                        Amount:      500000.0,
+                        Amount:      Money{Amount: 500000.0, Currency: "KRW"},
                         Category:    "급여",
                         Description: "3월 급여",
                         Date:        time.Now(),
@@ -1523,7 +1766,7 @@ func NewTestFixture() *TestFixture <span class="cov8" title="1">{
                         ID:          "tx-2",
                         AssetID:     assets[0].ID,
                         Type:        Expense,
-                        Amount:      100000.0,
+                        Amount:      Money{Amount: 100000.0, Currency: "KRW"},
                         Category:    "식비",
                         Description: "3월 식비",
                         Date:        time.Now(),
@@ -1533,7 +1776,7 @@ func NewTestFixture() *TestFixture <span class="cov8" title="1">{
                         ID:          "tx-3",
                         AssetID:     assets[0].ID,
                         Type:        Transfer,
-                        Amount:      1000000.0,
+                        Amount:      Money{Amount: 1000000.0, Currency: "KRW"},
                         Category:    "이체",
                         Description: "주식 계좌로 이체",
                         Date:        time.Now(),
@@ -1633,6 +1876,42 @@ func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class
         }
         <span class="cov8" title="1">return nil</span>
 }
+
+// CreateTestAsset 테스트용 자산을 생성합니다.
+func CreateTestAsset() *Asset <span class="cov0" title="0">{
+        return &amp;Asset{
+                ID:        "test-asset-1",
+                UserID:    "test-user-1",
+                Type:      Stock,
+                Name:      "삼성전자",
+                Amount:    NewMoney(500000, "KRW"),
+                CreatedAt: time.Now(),
+                UpdatedAt: time.Now(),
+        }
+}</span>
+
+// CreateTestTransaction 테스트용 거래 내역을 생성합니다.
+func CreateTestTransaction() *Transaction <span class="cov0" title="0">{
+        tx, _ := NewTransaction(
+                "test-asset-1",
+                Income,
+                NewMoney(100000, "KRW"),
+                "급여",
+                "2월 급여",
+        )
+        return tx
+}</span>
+
+// CreateTestPortfolio 테스트용 포트폴리오를 생성합니다.
+func CreateTestPortfolio() *Portfolio <span class="cov0" title="0">{
+        return &amp;Portfolio{
+                ID:        "test-portfolio-1",
+                UserID:    "test-user-1",
+                Assets:    []PortfolioAsset{},
+                CreatedAt: time.Now(),
+                UpdatedAt: time.Now(),
+        }
+}</span>
 </pre>
 
                 <pre class="file" id="file8" style="display: none">package domain
@@ -1800,7 +2079,61 @@ const (
 )
 </pre>
 
-                <pre class="file" id="file10" style="display: none">package gamification
+                <pre class="file" id="file10" style="display: none">package event
+
+import (
+        "time"
+)
+
+// Event 도메인 이벤트 인터페이스
+type Event interface {
+        GetEventType() string
+        GetAggregateType() string
+        GetPayload() map[string]interface{}
+        GetTimestamp() time.Time
+}
+
+// BaseEvent 기본 이벤트 구현체
+type BaseEvent struct {
+        EventType     string
+        AggregateType string
+        Payload       map[string]interface{}
+        Timestamp     time.Time
+}
+
+// NewEvent 새로운 이벤트를 생성합니다.
+func NewEvent(eventType string, aggregateType string, payload map[string]interface{}) Event <span class="cov0"
+                                                                                                  title="0">{
+        return &amp;BaseEvent{
+                EventType:     eventType,
+                AggregateType: aggregateType,
+                Payload:       payload,
+                Timestamp:     time.Now(),
+        }
+}</span>
+
+// GetEventType 이벤트 타입을 반환합니다.
+func (e *BaseEvent) GetEventType() string <span class="cov0" title="0">{
+        return e.EventType
+}</span>
+
+// GetAggregateType 집계 타입을 반환합니다.
+func (e *BaseEvent) GetAggregateType() string <span class="cov0" title="0">{
+        return e.AggregateType
+}</span>
+
+// GetPayload 이벤트 페이로드를 반환합니다.
+func (e *BaseEvent) GetPayload() map[string]interface{} <span class="cov0" title="0">{
+        return e.Payload
+}</span>
+
+// GetTimestamp 이벤트 발생 시간을 반환합니다.
+func (e *BaseEvent) GetTimestamp() time.Time <span class="cov0" title="0">{
+        return e.Timestamp
+}</span>
+</pre>
+
+                <pre class="file" id="file11" style="display: none">package gamification
 
 import (
         "context"
@@ -1986,7 +2319,7 @@ func (r *MemoryRepository) UpdateStreak(_ context.Context, id string, streakType
 }
 </pre>
 
-                <pre class="file" id="file11" style="display: none">package gamification
+                <pre class="file" id="file12" style="display: none">package gamification
 
 import (
         "time"
@@ -2218,7 +2551,7 @@ func getStreakTimeout(streakType StreakType) time.Duration <span class="cov8" ti
 }
 </pre>
 
-                <pre class="file" id="file12" style="display: none">package domain
+                <pre class="file" id="file13" style="display: none">package domain
 
 import (
         "context"
@@ -2275,7 +2608,7 @@ func NewRepositoryError(op string, err error) error <span class="cov0" title="0"
 }</span>
 </pre>
 
-                <pre class="file" id="file13" style="display: none">package domain
+                <pre class="file" id="file14" style="display: none">package domain
 
 import (
         "github.com/google/uuid"
@@ -2287,7 +2620,7 @@ func GenerateID() string <span class="cov0" title="0">{
 }</span>
 </pre>
 
-                <pre class="file" id="file14" style="display: none">package events
+                <pre class="file" id="file15" style="display: none">package events
 
 import (
         "context"
@@ -2396,7 +2729,7 @@ func (p *SimplePublisher) Unsubscribe(handler domain.Handler) error <span class=
 }
 </pre>
 
-                <pre class="file" id="file15" style="display: none">package github
+                <pre class="file" id="file16" style="display: none">package github
 
 import (
         "context"
@@ -2447,7 +2780,7 @@ func (c *ActionCollector) Collect(ctx context.Context) ([]domain.Metric, error) 
 }
 </pre>
 
-                <pre class="file" id="file16" style="display: none">package alerts
+                <pre class="file" id="file17" style="display: none">package alerts
 
 import (
         "context"
@@ -2545,7 +2878,7 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error <span cl
 }
 </pre>
 
-                <pre class="file" id="file17" style="display: none">package prometheus
+                <pre class="file" id="file18" style="display: none">package prometheus
 
 import (
         "context"
@@ -2653,7 +2986,7 @@ func (e *Exporter) getOrCreateCollector(m metrics.Metric) (prometheus.Collector,
 }
 </pre>
 
-                <pre class="file" id="file18" style="display: none">package metrics
+                <pre class="file" id="file19" style="display: none">package metrics
 
 import (
         "context"
@@ -2745,7 +3078,7 @@ func (c *SimpleCollector) Reset() <span class="cov8" title="1">{
 }</span>
 </pre>
 
-                <pre class="file" id="file19" style="display: none">package github
+                <pre class="file" id="file20" style="display: none">package github
 
 import (
         "context"
@@ -2853,7 +3186,7 @@ func (c *ActionCollector) AddDurationMetric(name string, duration time.Duration)
 }</span>
 </pre>
 
-                <pre class="file" id="file20" style="display: none">package health
+                <pre class="file" id="file21" style="display: none">package health
 
 import (
         "context"

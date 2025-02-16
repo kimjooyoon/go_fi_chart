@@ -48,7 +48,7 @@ func NewTestFixture() *TestFixture {
 			ID:          "tx-1",
 			AssetID:     assets[0].ID,
 			Type:        Income,
-			Amount:      500000.0,
+			Amount:      Money{Amount: 500000.0, Currency: "KRW"},
 			Category:    "급여",
 			Description: "3월 급여",
 			Date:        time.Now(),
@@ -58,7 +58,7 @@ func NewTestFixture() *TestFixture {
 			ID:          "tx-2",
 			AssetID:     assets[0].ID,
 			Type:        Expense,
-			Amount:      100000.0,
+			Amount:      Money{Amount: 100000.0, Currency: "KRW"},
 			Category:    "식비",
 			Description: "3월 식비",
 			Date:        time.Now(),
@@ -68,7 +68,7 @@ func NewTestFixture() *TestFixture {
 			ID:          "tx-3",
 			AssetID:     assets[0].ID,
 			Type:        Transfer,
-			Amount:      1000000.0,
+			Amount:      Money{Amount: 1000000.0, Currency: "KRW"},
 			Category:    "이체",
 			Description: "주식 계좌로 이체",
 			Date:        time.Now(),
@@ -167,4 +167,40 @@ func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio {
 		}
 	}
 	return nil
+}
+
+// CreateTestAsset 테스트용 자산을 생성합니다.
+func CreateTestAsset() *Asset {
+	return &Asset{
+		ID:        "test-asset-1",
+		UserID:    "test-user-1",
+		Type:      Stock,
+		Name:      "삼성전자",
+		Amount:    NewMoney(500000, "KRW"),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+}
+
+// CreateTestTransaction 테스트용 거래 내역을 생성합니다.
+func CreateTestTransaction() *Transaction {
+	tx, _ := NewTransaction(
+		"test-asset-1",
+		Income,
+		NewMoney(100000, "KRW"),
+		"급여",
+		"2월 급여",
+	)
+	return tx
+}
+
+// CreateTestPortfolio 테스트용 포트폴리오를 생성합니다.
+func CreateTestPortfolio() *Portfolio {
+	return &Portfolio{
+		ID:        "test-portfolio-1",
+		UserID:    "test-user-1",
+		Assets:    []PortfolioAsset{},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
 }

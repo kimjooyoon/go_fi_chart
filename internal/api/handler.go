@@ -260,6 +260,7 @@ type CreateTransactionRequest struct {
 	AssetID     string  `json:"assetId"`
 	Type        string  `json:"type"`
 	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
 	Category    string  `json:"category"`
 	Description string  `json:"description"`
 }
@@ -269,6 +270,7 @@ type TransactionResponse struct {
 	AssetID     string    `json:"assetId"`
 	Type        string    `json:"type"`
 	Amount      float64   `json:"amount"`
+	Currency    string    `json:"currency"`
 	Category    string    `json:"category"`
 	Description string    `json:"description"`
 	Date        time.Time `json:"date"`
@@ -294,7 +296,8 @@ func (h *Handler) ListTransactions(w http.ResponseWriter, r *http.Request) {
 			ID:          tx.ID,
 			AssetID:     tx.AssetID,
 			Type:        string(tx.Type),
-			Amount:      tx.Amount,
+			Amount:      tx.Amount.Amount,
+			Currency:    tx.Amount.Currency,
 			Category:    tx.Category,
 			Description: tx.Description,
 			Date:        tx.Date,
@@ -320,13 +323,18 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 거래 생성
-	tx := asset.NewTransaction(
+	money := asset.NewMoney(req.Amount, req.Currency)
+	tx, err := asset.NewTransaction(
 		req.AssetID,
 		asset.TransactionType(req.Type),
-		req.Amount,
+		money,
 		req.Category,
 		req.Description,
 	)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	// 거래 유효성 검증
 	if err := targetAsset.ValidateTransaction(tx); err != nil {
@@ -357,7 +365,8 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		ID:          tx.ID,
 		AssetID:     tx.AssetID,
 		Type:        string(tx.Type),
-		Amount:      tx.Amount,
+		Amount:      tx.Amount.Amount,
+		Currency:    tx.Amount.Currency,
 		Category:    tx.Category,
 		Description: tx.Description,
 		Date:        tx.Date,
@@ -384,7 +393,8 @@ func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 		ID:          tx.ID,
 		AssetID:     tx.AssetID,
 		Type:        string(tx.Type),
-		Amount:      tx.Amount,
+		Amount:      tx.Amount.Amount,
+		Currency:    tx.Amount.Currency,
 		Category:    tx.Category,
 		Description: tx.Description,
 		Date:        tx.Date,

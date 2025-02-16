@@ -102,23 +102,43 @@ func (r *MemoryRepository[T]) WithTransaction(ctx context.Context, fn func(ctx c
 
 // MemoryAssetRepository Asset 도메인의 인메모리 저장소
 type MemoryAssetRepository struct {
-	*MemoryRepository[*Asset]
+	repo *MemoryRepository[*Asset]
 }
 
 // NewMemoryAssetRepository 새로운 Asset 인메모리 저장소를 생성합니다.
 func NewMemoryAssetRepository() *MemoryAssetRepository {
 	return &MemoryAssetRepository{
-		MemoryRepository: NewMemoryRepository[*Asset](),
+		repo: NewMemoryRepository[*Asset](),
 	}
+}
+
+// Save Asset을 저장합니다.
+func (r *MemoryAssetRepository) Save(ctx context.Context, asset *Asset) error {
+	return r.repo.Save(ctx, asset)
+}
+
+// FindByID ID로 Asset을 조회합니다.
+func (r *MemoryAssetRepository) FindByID(ctx context.Context, id string) (*Asset, error) {
+	return r.repo.FindByID(ctx, id)
+}
+
+// Update Asset을 업데이트합니다.
+func (r *MemoryAssetRepository) Update(ctx context.Context, asset *Asset) error {
+	return r.repo.Update(ctx, asset)
+}
+
+// Delete ID로 Asset을 삭제합니다.
+func (r *MemoryAssetRepository) Delete(ctx context.Context, id string) error {
+	return r.repo.Delete(ctx, id)
 }
 
 // FindByUserID 사용자 ID로 Asset 목록을 조회합니다.
 func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
 
 	var result []*Asset
-	for _, asset := range r.data {
+	for _, asset := range r.repo.data {
 		if asset.UserID == userID {
 			result = append(result, asset)
 		}
@@ -128,11 +148,11 @@ func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) (
 
 // FindByType Asset 유형으로 Asset 목록을 조회합니다.
 func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([]*Asset, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
 
 	var result []*Asset
-	for _, asset := range r.data {
+	for _, asset := range r.repo.data {
 		if asset.Type == assetType {
 			result = append(result, asset)
 		}
@@ -142,40 +162,75 @@ func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([
 
 // UpdateAmount Asset의 금액을 업데이트합니다.
 func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amount float64) error {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.repo.mutex.Lock()
+	defer r.repo.mutex.Unlock()
 
-	asset, ok := r.data[id]
+	asset, ok := r.repo.data[id]
 	if !ok {
 		return domain.NewRepositoryError("UpdateAmount", fmt.Errorf("asset with ID %s not found", id))
 	}
 
 	asset.Amount = Money{Amount: amount, Currency: asset.Amount.Currency}
 	asset.UpdatedAt = time.Now()
-	r.data[id] = asset
+	r.repo.data[id] = asset
 
 	return nil
 }
 
-// MemoryTransactionRepository Transaction 도메인의 인메모리 저장소
-type MemoryTransactionRepository struct {
-	*MemoryRepository[*Transaction]
+// FindAll 검색 조건에 맞는 모든 Asset을 조회합니다.
+func (r *MemoryAssetRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Asset, error) {
+	return r.repo.FindAll(ctx, criteria)
 }
 
-// NewMemoryTransactionRepository 새로운 Transaction 인메모리 저장소를 생성합니다.
+// FindOne 검색 조건에 맞는 하나의 Asset을 조회합니다.
+func (r *MemoryAssetRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Asset, error) {
+	return r.repo.FindOne(ctx, criteria)
+}
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryAssetRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	return r.repo.WithTransaction(ctx, fn)
+}
+
+// MemoryTransactionRepository Transaction 도메인의 인메모리 저장소 구현체입니다.
+type MemoryTransactionRepository struct {
+	repo *MemoryRepository[*Transaction]
+}
+
+// NewMemoryTransactionRepository 새로운 인메모리 Transaction 저장소를 생성합니다.
 func NewMemoryTransactionRepository() *MemoryTransactionRepository {
 	return &MemoryTransactionRepository{
-		MemoryRepository: NewMemoryRepository[*Transaction](),
+		repo: NewMemoryRepository[*Transaction](),
 	}
 }
 
-// FindByAssetID 자산 ID로 Transaction 목록을 조회합니다.
+// Save Transaction을 저장합니다.
+func (r *MemoryTransactionRepository) Save(ctx context.Context, tx *Transaction) error {
+	return r.repo.Save(ctx, tx)
+}
+
+// FindByID ID로 Transaction을 조회합니다.
+func (r *MemoryTransactionRepository) FindByID(ctx context.Context, id string) (*Transaction, error) {
+	return r.repo.FindByID(ctx, id)
+}
+
+// Update Transaction을 업데이트합니다.
+func (r *MemoryTransactionRepository) Update(ctx context.Context, tx *Transaction) error {
+	return r.repo.Update(ctx, tx)
+}
+
+// Delete ID로 Transaction을 삭제합니다.
+func (r *MemoryTransactionRepository) Delete(ctx context.Context, id string) error {
+	return r.repo.Delete(ctx, id)
+}
+
+// FindByAssetID AssetID로 Transaction 목록을 조회합니다.
 func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID string) ([]*Transaction, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
 
 	var result []*Transaction
-	for _, tx := range r.data {
+	for _, tx := range r.repo.data {
 		if tx.AssetID == assetID {
 			result = append(result, tx)
 		}
@@ -185,57 +240,99 @@ func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID s
 
 // FindByDateRange 날짜 범위로 Transaction 목록을 조회합니다.
 func (r *MemoryTransactionRepository) FindByDateRange(_ context.Context, start, end time.Time) ([]*Transaction, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
 
 	var result []*Transaction
-	for _, tx := range r.data {
-		if (tx.Date.Equal(start) || tx.Date.After(start)) && (tx.Date.Equal(end) || tx.Date.Before(end)) {
+	for _, tx := range r.repo.data {
+		if (tx.Date.Equal(start) || tx.Date.After(start)) &&
+			(tx.Date.Equal(end) || tx.Date.Before(end)) {
 			result = append(result, tx)
 		}
 	}
 	return result, nil
 }
 
-// GetTotalAmount 자산 ID에 대한 총 거래 금액을 계산합니다.
-func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (float64, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+// GetTotalAmount 특정 기간 동안의 총 거래 금액을 계산합니다.
+func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (Money, error) {
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
 
-	var total float64
-	for _, tx := range r.data {
+	total := Money{Amount: 0, Currency: "KRW"}
+	for _, tx := range r.repo.data {
 		if tx.AssetID == assetID {
 			switch tx.Type {
 			case Income:
-				total += tx.Amount
+				result, err := total.Add(tx.Amount)
+				if err != nil {
+					return Money{}, err
+				}
+				total = result
 			case Expense:
-				total -= tx.Amount
-			case Transfer:
-				// Transfer는 별도 처리 필요
+				result, err := total.Subtract(tx.Amount)
+				if err != nil {
+					return Money{}, err
+				}
+				total = result
 			}
 		}
 	}
 	return total, nil
 }
 
-// MemoryPortfolioRepository Portfolio 도메인의 인메모리 저장소
-type MemoryPortfolioRepository struct {
-	*MemoryRepository[*Portfolio]
+// FindAll 검색 조건에 맞는 모든 Transaction을 조회합니다.
+func (r *MemoryTransactionRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Transaction, error) {
+	return r.repo.FindAll(ctx, criteria)
 }
 
-// NewMemoryPortfolioRepository 새로운 Portfolio 인메모리 저장소를 생성합니다.
+// FindOne 검색 조건에 맞는 하나의 Transaction을 조회합니다.
+func (r *MemoryTransactionRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Transaction, error) {
+	return r.repo.FindOne(ctx, criteria)
+}
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryTransactionRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	return r.repo.WithTransaction(ctx, fn)
+}
+
+// MemoryPortfolioRepository Portfolio 도메인의 인메모리 저장소 구현체입니다.
+type MemoryPortfolioRepository struct {
+	repo *MemoryRepository[*Portfolio]
+}
+
+// NewMemoryPortfolioRepository 새로운 인메모리 Portfolio 저장소를 생성합니다.
 func NewMemoryPortfolioRepository() *MemoryPortfolioRepository {
 	return &MemoryPortfolioRepository{
-		MemoryRepository: NewMemoryRepository[*Portfolio](),
+		repo: NewMemoryRepository[*Portfolio](),
 	}
+}
+
+// Save Portfolio를 저장합니다.
+func (r *MemoryPortfolioRepository) Save(ctx context.Context, portfolio *Portfolio) error {
+	return r.repo.Save(ctx, portfolio)
+}
+
+// FindByID ID로 Portfolio를 조회합니다.
+func (r *MemoryPortfolioRepository) FindByID(ctx context.Context, id string) (*Portfolio, error) {
+	return r.repo.FindByID(ctx, id)
+}
+
+// Update Portfolio를 업데이트합니다.
+func (r *MemoryPortfolioRepository) Update(ctx context.Context, portfolio *Portfolio) error {
+	return r.repo.Update(ctx, portfolio)
+}
+
+// Delete ID로 Portfolio를 삭제합니다.
+func (r *MemoryPortfolioRepository) Delete(ctx context.Context, id string) error {
+	return r.repo.Delete(ctx, id)
 }
 
 // FindByUserID 사용자 ID로 Portfolio를 조회합니다.
 func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID string) (*Portfolio, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
 
-	for _, portfolio := range r.data {
+	for _, portfolio := range r.repo.data {
 		if portfolio.UserID == userID {
 			return portfolio, nil
 		}
@@ -245,16 +342,32 @@ func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID strin
 
 // UpdateAssets Portfolio의 자산 구성을 업데이트합니다.
 func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, assets []PortfolioAsset) error {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.repo.mutex.Lock()
+	defer r.repo.mutex.Unlock()
 
-	portfolio, exists := r.data[id]
-	if !exists {
+	portfolio, ok := r.repo.data[id]
+	if !ok {
 		return domain.NewRepositoryError("UpdateAssets", fmt.Errorf("portfolio with ID %s not found", id))
 	}
 
 	portfolio.Assets = assets
 	portfolio.UpdatedAt = time.Now()
-	r.data[id] = portfolio
+	r.repo.data[id] = portfolio
+
 	return nil
+}
+
+// FindAll 검색 조건에 맞는 모든 Portfolio를 조회합니다.
+func (r *MemoryPortfolioRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Portfolio, error) {
+	return r.repo.FindAll(ctx, criteria)
+}
+
+// FindOne 검색 조건에 맞는 하나의 Portfolio를 조회합니다.
+func (r *MemoryPortfolioRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Portfolio, error) {
+	return r.repo.FindOne(ctx, criteria)
+}
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryPortfolioRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	return r.repo.WithTransaction(ctx, fn)
 }

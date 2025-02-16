@@ -117,15 +117,18 @@ func Test_memory_repo_should_update_asset_amount(t *testing.T) {
 func Test_memory_repo_should_save_and_find_transaction_by_id(t *testing.T) {
 	// Given
 	repo := NewMemoryTransactionRepository()
-	tx := NewTransaction("asset-1", Income, 500000.0, "급여", "3월 급여")
+	money := NewMoney(500000, "KRW")
+	tx, err := NewTransaction("asset-1", Income, money, "급여", "2월 급여")
+	if err != nil {
+		t.Fatalf("거래 생성 중 오류 발생: %v", err)
+	}
 
 	// When
-	err := repo.Save(context.Background(), tx)
-	assert.NoError(t, err)
-
-	found, err := repo.FindByID(context.Background(), tx.ID)
+	err = repo.Save(context.Background(), tx)
 
 	// Then
+	assert.NoError(t, err)
+	found, err := repo.FindByID(context.Background(), tx.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, tx.ID, found.ID)
 	assert.Equal(t, tx.Amount, found.Amount)
@@ -134,45 +137,73 @@ func Test_memory_repo_should_save_and_find_transaction_by_id(t *testing.T) {
 func Test_memory_repo_should_find_transactions_by_date_range(t *testing.T) {
 	// Given
 	repo := NewMemoryTransactionRepository()
-	now := time.Now()
-	tx1 := NewTransaction("asset-1", Income, 500000.0, "급여", "3월 급여")
-	tx2 := NewTransaction("asset-1", Expense, 100000.0, "식비", "3월 식비")
-	tx1.Date = now.Add(-24 * time.Hour)
-	tx2.Date = now
+	money := NewMoney(500000, "KRW")
+	tx1, err := NewTransaction("asset-1", Income, money, "급여", "2월 급여")
+	if err != nil {
+		t.Fatalf("거래 생성 중 오류 발생: %v", err)
+	}
+	tx1.Date = time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
 
-	err := repo.Save(context.Background(), tx1)
-	assert.NoError(t, err)
-	err = repo.Save(context.Background(), tx2)
-	assert.NoError(t, err)
+	money2 := NewMoney(300000, "KRW")
+	tx2, err := NewTransaction("asset-1", Expense, money2, "식비", "2월 식비")
+	if err != nil {
+		t.Fatalf("거래 생성 중 오류 발생: %v", err)
+	}
+	tx2.Date = time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)
+
+	money3 := NewMoney(200000, "KRW")
+	tx3, err := NewTransaction("asset-1", Income, money3, "부수입", "2월 부수입")
+	if err != nil {
+		t.Fatalf("거래 생성 중 오류 발생: %v", err)
+	}
+	tx3.Date = time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+
+	repo.Save(context.Background(), tx1)
+	repo.Save(context.Background(), tx2)
+	repo.Save(context.Background(), tx3)
 
 	// When
-	start := now.Add(-48 * time.Hour)
-	end := now.Add(24 * time.Hour)
-	transactions, err := repo.FindByDateRange(context.Background(), start, end)
+	start := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2024, 2, 28, 23, 59, 59, 0, time.UTC)
+	found, err := repo.FindByDateRange(context.Background(), start, end)
 
 	// Then
 	assert.NoError(t, err)
-	assert.Len(t, transactions, 2)
+	assert.Len(t, found, 2)
 }
 
 func Test_memory_repo_should_calculate_total_amount(t *testing.T) {
 	// Given
 	repo := NewMemoryTransactionRepository()
-	assetID := "asset-1"
-	tx1 := NewTransaction(assetID, Income, 500000.0, "급여", "3월 급여")
-	tx2 := NewTransaction(assetID, Expense, 100000.0, "식비", "3월 식비")
+	money1 := NewMoney(500000, "KRW")
+	tx1, err := NewTransaction("asset-1", Income, money1, "급여", "2월 급여")
+	if err != nil {
+		t.Fatalf("거래 생성 중 오류 발생: %v", err)
+	}
 
-	err := repo.Save(context.Background(), tx1)
-	assert.NoError(t, err)
-	err = repo.Save(context.Background(), tx2)
-	assert.NoError(t, err)
+	money2 := NewMoney(300000, "KRW")
+	tx2, err := NewTransaction("asset-1", Expense, money2, "식비", "2월 식비")
+	if err != nil {
+		t.Fatalf("거래 생성 중 오류 발생: %v", err)
+	}
+
+	money3 := NewMoney(200000, "KRW")
+	tx3, err := NewTransaction("asset-1", Income, money3, "부수입", "2월 부수입")
+	if err != nil {
+		t.Fatalf("거래 생성 중 오류 발생: %v", err)
+	}
+
+	repo.Save(context.Background(), tx1)
+	repo.Save(context.Background(), tx2)
+	repo.Save(context.Background(), tx3)
 
 	// When
-	total, err := repo.GetTotalAmount(context.Background(), assetID)
+	total, err := repo.GetTotalAmount(context.Background(), "asset-1")
 
 	// Then
 	assert.NoError(t, err)
-	assert.Equal(t, 400000.0, total)
+	expectedTotal := NewMoney(400000, "KRW")
+	assert.Equal(t, expectedTotal, total)
 }
 
 func Test_should_save_and_find_portfolio_by_id(t *testing.T) {
