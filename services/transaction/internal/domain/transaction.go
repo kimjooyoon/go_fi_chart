@@ -29,6 +29,7 @@ type Transaction struct {
 	ExecutedPrice valueobjects.Money
 	ExecutedAt    time.Time
 	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // NewTransaction은 새로운 거래를 생성합니다
@@ -61,6 +62,7 @@ func NewTransaction(
 		return nil, errors.New("executed price must be positive")
 	}
 
+	now := time.Now()
 	return &Transaction{
 		ID:            uuid.New(),
 		UserID:        userID,
@@ -71,8 +73,41 @@ func NewTransaction(
 		Quantity:      quantity,
 		ExecutedPrice: executedPrice,
 		ExecutedAt:    executedAt,
-		CreatedAt:     time.Now(),
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}, nil
+}
+
+// Validate는 거래의 유효성을 검증합니다
+func (t *Transaction) Validate() error {
+	if t.Quantity <= 0 {
+		return errors.New("quantity must be positive")
+	}
+	if t.Type != Buy && t.Type != Sell {
+		return errors.New("invalid transaction type")
+	}
+	return nil
+}
+
+// CalculateTotalAmount는 거래의 총 금액을 계산합니다
+func (t *Transaction) CalculateTotalAmount() valueobjects.Money {
+	return t.Amount
+}
+
+// Update는 거래 정보를 업데이트합니다
+func (t *Transaction) Update(
+	transactionType TransactionType,
+	amount valueobjects.Money,
+	quantity float64,
+	executedPrice valueobjects.Money,
+	executedAt time.Time,
+) {
+	t.Type = transactionType
+	t.Amount = amount
+	t.Quantity = quantity
+	t.ExecutedPrice = executedPrice
+	t.ExecutedAt = executedAt
+	t.UpdatedAt = time.Now()
 }
 
 // TransactionRepository는 거래 저장소 인터페이스를 정의합니다

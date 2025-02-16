@@ -2,11 +2,14 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/google/uuid"
 )
+
+var ErrTransactionNotFound = errors.New("transaction not found")
 
 // MemoryTransactionRepository는 인메모리 거래 저장소 구현입니다
 type MemoryTransactionRepository struct {
@@ -106,12 +109,12 @@ func (r *MemoryTransactionRepository) Update(_ context.Context, transaction *Tra
 }
 
 // Delete는 거래를 삭제합니다
-func (r *MemoryTransactionRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *MemoryTransactionRepository) Delete(_ context.Context, id uuid.UUID) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.transactions[id]; !exists {
-		return fmt.Errorf("transaction with ID %s not found", id)
+		return ErrTransactionNotFound
 	}
 
 	delete(r.transactions, id)

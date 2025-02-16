@@ -262,8 +262,31 @@ func (h *Handler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 업데이트 로직 구현
-	// 실제 구현에서는 더 세밀한 업데이트 로직이 필요할 수 있습니다
+	executedAt, err := time.Parse(time.RFC3339, req.ExecutedAt)
+	if err != nil {
+		http.Error(w, "Invalid executed at time", http.StatusBadRequest)
+		return
+	}
+
+	amount, err := valueobjects.NewMoney(req.Amount, "USD")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	executedPrice, err := valueobjects.NewMoney(req.ExecutedPrice, "USD")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	transaction.Update(
+		domain.TransactionType(req.Type),
+		amount,
+		req.Quantity,
+		executedPrice,
+		executedAt,
+	)
 
 	if err := h.repository.Update(r.Context(), transaction); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -288,7 +311,7 @@ func (h *Handler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusOK)
 }
 
 func toTransactionResponse(t *domain.Transaction) TransactionResponse {
