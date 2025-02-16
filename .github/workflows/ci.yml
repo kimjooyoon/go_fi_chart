@@ -19,6 +19,17 @@ jobs:
           go-version: '1.24.0'
           cache: true
 
+      - name: Install dependencies
+        run: |
+          go mod download
+          cd pkg && go mod download && cd ..
+          for dir in services/*/; do
+            if [ -f "$dir/go.mod" ]; then
+              echo "Installing dependencies for $dir"
+              (cd "$dir" && go mod download)
+            fi
+          done
+
       - name: Install golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
 

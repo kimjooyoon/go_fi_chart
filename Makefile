@@ -21,8 +21,22 @@ all: init lint test security coverage
 
 # 초기 설정
 .PHONY: init
-init: install-tools tidy
+init: install-tools init-work tidy
 	@echo "초기화 완료"
+
+.PHONY: init-work
+init-work:
+	@echo "go.work 초기화 중..."
+	@rm -f go.work
+	@$(GO) work init
+	@$(GO) work use .
+	@$(GO) work use ./pkg
+	@for service in $(shell ls services); do \
+		if [ -f "services/$$service/go.mod" ]; then \
+			echo "서비스 추가: $$service"; \
+			$(GO) work use ./services/$$service; \
+		fi \
+	done
 
 .PHONY: install-tools
 install-tools:
