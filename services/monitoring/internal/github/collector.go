@@ -18,6 +18,7 @@ type Collector struct {
 // NewCollector 새로운 GitHub 메트릭 수집기를 생성합니다.
 func NewCollector(publisher pkgdomain.Publisher) *Collector {
 	return &Collector{
+		metrics:   make([]domain.Metric, 0),
 		publisher: publisher,
 	}
 }
@@ -32,13 +33,13 @@ func (c *Collector) Add(metric domain.Metric) {
 
 // Collect 메트릭을 수집하고 이벤트를 발행합니다.
 func (c *Collector) Collect(ctx context.Context) ([]domain.Metric, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	result := make([]domain.Metric, len(c.metrics))
 	copy(result, c.metrics)
 
-	for _, metric := range c.metrics {
+	for _, metric := range result {
 		event := pkgdomain.NewMonitoringEvent(pkgdomain.TypeMetricCollected, metric)
 		if err := c.publisher.Publish(ctx, event); err != nil {
 			return nil, err

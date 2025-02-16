@@ -118,11 +118,11 @@
                         </option>
 
                         <option value="file19">
-                                github.com/aske/go_fi_chart/services/monitoring/internal/github/collector.go (0.0%)
+                                github.com/aske/go_fi_chart/services/monitoring/internal/github/collector.go (94.7%)
                         </option>
 
                         <option value="file20">github.com/aske/go_fi_chart/services/monitoring/internal/github/types.go
-                                (0.0%)
+                                (100.0%)
                         </option>
 
                         <option value="file21">
@@ -140,7 +140,8 @@
                         </option>
 
                         <option value="file24">
-                                github.com/aske/go_fi_chart/services/monitoring/internal/metrics/simple/metric.go (0.0%)
+                                github.com/aske/go_fi_chart/services/monitoring/internal/metrics/simple/metric.go
+                                (100.0%)
                         </option>
 
                         <option value="file25">github.com/aske/go_fi_chart/services/monitoring/internal/metrics/types.go
@@ -3075,14 +3076,15 @@ type Collector struct {
 }
 
 // NewCollector 새로운 GitHub 메트릭 수집기를 생성합니다.
-func NewCollector(publisher pkgdomain.Publisher) *Collector <span class="cov0" title="0">{
+func NewCollector(publisher pkgdomain.Publisher) *Collector <span class="cov8" title="1">{
         return &amp;Collector{
+                metrics:   make([]domain.Metric, 0),
                 publisher: publisher,
         }
 }</span>
 
 // Add 메트릭을 추가합니다.
-func (c *Collector) Add(metric domain.Metric) <span class="cov0" title="0">{
+func (c *Collector) Add(metric domain.Metric) <span class="cov8" title="1">{
         c.mu.Lock()
         defer c.mu.Unlock()
 
@@ -3090,26 +3092,26 @@ func (c *Collector) Add(metric domain.Metric) <span class="cov0" title="0">{
 }</span>
 
 // Collect 메트릭을 수집하고 이벤트를 발행합니다.
-func (c *Collector) Collect(ctx context.Context) ([]domain.Metric, error) <span class="cov0" title="0">{
-        c.mu.RLock()
-        defer c.mu.RUnlock()
+func (c *Collector) Collect(ctx context.Context) ([]domain.Metric, error) <span class="cov8" title="1">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
 
         result := make([]domain.Metric, len(c.metrics))
         copy(result, c.metrics)
 
-        for _, metric := range c.metrics </span><span class="cov0" title="0">{
+        for _, metric := range result </span><span class="cov8" title="1">{
                 event := pkgdomain.NewMonitoringEvent(pkgdomain.TypeMetricCollected, metric)
                 if err := c.publisher.Publish(ctx, event); err != nil </span><span class="cov0" title="0">{
                         return nil, err
                 }</span>
         }
 
-        <span class="cov0" title="0">c.metrics = make([]domain.Metric, 0)
+        <span class="cov8" title="1">c.metrics = make([]domain.Metric, 0)
         return result, nil</span>
 }
 
 // Metrics 수집된 메트릭 목록을 반환합니다.
-func (c *Collector) Metrics() []domain.Metric <span class="cov0" title="0">{
+func (c *Collector) Metrics() []domain.Metric <span class="cov8" title="1">{
         c.mu.RLock()
         defer c.mu.RUnlock()
 
@@ -3146,8 +3148,8 @@ type ActionMetric struct {
 }
 
 // NewActionMetric 새로운 액션 메트릭을 생성합니다.
-func NewActionMetric(name string, status ActionStatus, duration time.Duration) ActionMetric <span class="cov0"
-                                                                                                  title="0">{
+func NewActionMetric(name string, status ActionStatus, duration time.Duration) ActionMetric <span class="cov8"
+                                                                                                  title="1">{
         now := time.Now()
         return ActionMetric{
                 WorkflowName: name,
@@ -3159,20 +3161,20 @@ func NewActionMetric(name string, status ActionStatus, duration time.Duration) A
 }</span>
 
 // ToMetric 액션 메트릭을 일반 메트릭으로 변환합니다.
-func (m ActionMetric) ToMetric() domain.Metric <span class="cov0" title="0">{
+func (m ActionMetric) ToMetric() domain.Metric <span class="cov8" title="1">{
         var value float64
         switch m.Status </span>{
-        case ActionStatusSuccess:<span class="cov0" title="0">
+        case ActionStatusSuccess:<span class="cov8" title="1">
                 value = 1</span>
-        case ActionStatusFailure:<span class="cov0" title="0">
+        case ActionStatusFailure:<span class="cov8" title="1">
                 value = 0</span>
-        case ActionStatusInProgress:<span class="cov0" title="0">
+        case ActionStatusInProgress:<span class="cov8" title="1">
                 value = 2</span>
-        default:<span class="cov0" title="0">
+        default:<span class="cov8" title="1">
                 value = -1</span>
         }
 
-        <span class="cov0" title="0">return domain.NewBaseMetric(
+        <span class="cov8" title="1">return domain.NewBaseMetric(
                 m.WorkflowName,
                 domain.TypeGauge,
                 domain.NewValue(value, map[string]string{
@@ -3183,7 +3185,7 @@ func (m ActionMetric) ToMetric() domain.Metric <span class="cov0" title="0">{
 }
 
 // ToDurationMetric 액션 실행 시간 메트릭을 생성합니다.
-func (m ActionMetric) ToDurationMetric() domain.Metric <span class="cov0" title="0">{
+func (m ActionMetric) ToDurationMetric() domain.Metric <span class="cov8" title="1">{
         return domain.NewBaseMetric(
                 m.WorkflowName+"_duration",
                 domain.TypeGauge,
@@ -3401,8 +3403,8 @@ type Metric struct {
 }
 
 // NewMetric 새로운 메트릭을 생성합니다.
-func NewMetric(name string, metricType metrics.Type, value float64, description string) *Metric <span class="cov0"
-                                                                                                      title="0">{
+func NewMetric(name string, metricType metrics.Type, value float64, description string) *Metric <span class="cov8"
+                                                                                                      title="1">{
         return &amp;Metric{
                 name:        name,
                 metricType:  metricType,
@@ -3412,27 +3414,27 @@ func NewMetric(name string, metricType metrics.Type, value float64, description 
 }</span>
 
 // Name 메트릭의 이름을 반환합니다.
-func (m *Metric) Name() string <span class="cov0" title="0">{
+func (m *Metric) Name() string <span class="cov8" title="1">{
         return m.name
 }</span>
 
 // Type 메트릭의 타입을 반환합니다.
-func (m *Metric) Type() metrics.Type <span class="cov0" title="0">{
+func (m *Metric) Type() metrics.Type <span class="cov8" title="1">{
         return m.metricType
 }</span>
 
 // Value 메트릭의 값을 반환합니다.
-func (m *Metric) Value() metrics.Value <span class="cov0" title="0">{
+func (m *Metric) Value() metrics.Value <span class="cov8" title="1">{
         return m.value
 }</span>
 
 // Description 메트릭의 설명을 반환합니다.
-func (m *Metric) Description() string <span class="cov0" title="0">{
+func (m *Metric) Description() string <span class="cov8" title="1">{
         return m.description
 }</span>
 
 // WithLabels 레이블이 추가된 새로운 메트릭을 반환합니다.
-func (m *Metric) WithLabels(labels map[string]string) *Metric <span class="cov0" title="0">{
+func (m *Metric) WithLabels(labels map[string]string) *Metric <span class="cov8" title="1">{
         return &amp;Metric{
                 name:        m.name,
                 metricType:  m.metricType,
