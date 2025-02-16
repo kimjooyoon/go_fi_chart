@@ -68,16 +68,29 @@
 				
 				<option value="file5">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
 
-                        <option value="file6">
+                        <option value="file6">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
+                                (94.1%)
+                        </option>
+
+                        <option value="file7">github.com/aske/go_fi_chart/services/monitoring/internal/events/event.go
+                                (94.4%)
+                        </option>
+
+                        <option value="file8">
+                                github.com/aske/go_fi_chart/services/monitoring/internal/exporters/prometheus/exporter.go
+                                (93.5%)
+                        </option>
+
+                        <option value="file9">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (100.0%)
                         </option>
 
-                        <option value="file7">
+                        <option value="file10">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/github/collector.go
                                 (100.0%)
                         </option>
 
-                        <option value="file8">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                        <option value="file11">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
                                 (100.0%)
                         </option>
 
@@ -778,7 +791,304 @@ func NewRepositoryError(op string, err error) error <span class="cov0" title="0"
 }</span>
 </pre>
 
-                <pre class="file" id="file6" style="display: none">package metrics
+                <pre class="file" id="file6" style="display: none">package alerts
+
+import (
+        "context"
+        "sync"
+        "time"
+
+        "github.com/aske/go_fi_chart/services/monitoring/internal/events"
+)
+
+// AlertLevel 알림의 심각도를 나타냅니다.
+type AlertLevel string
+
+const (
+        LevelInfo     AlertLevel = "INFO"
+        LevelWarning  AlertLevel = "WARNING"
+        LevelError    AlertLevel = "ERROR"
+        LevelCritical AlertLevel = "CRITICAL"
+)
+
+// Alert 모니터링 시스템의 알림을 나타냅니다.
+type Alert struct {
+        ID        string            `json:"id"`
+        Level     AlertLevel        `json:"level"`
+        Source    string            `json:"source"`
+        Message   string            `json:"message"`
+        Timestamp time.Time         `json:"timestamp"`
+        Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
+// Notifier 알림을 처리하는 인터페이스입니다.
+type Notifier interface {
+        Notify(ctx context.Context, alert Alert) error
+}
+
+// SimpleNotifier 기본적인 알림 처리자 구현체입니다.
+type SimpleNotifier struct {
+        mu        sync.RWMutex
+        publisher events.Publisher
+        handlers  []Notifier
+}
+
+// NewSimpleNotifier 새로운 SimpleNotifier를 생성합니다.
+func NewSimpleNotifier(publisher events.Publisher) *SimpleNotifier <span class="cov8" title="1">{
+        return &amp;SimpleNotifier{
+                publisher: publisher,
+                handlers:  make([]Notifier, 0),
+        }
+}</span>
+
+// AddHandler 알림 핸들러를 추가합니다.
+func (n *SimpleNotifier) AddHandler(handler Notifier) <span class="cov8" title="1">{
+        n.mu.Lock()
+        defer n.mu.Unlock()
+        n.handlers = append(n.handlers, handler)
+}</span>
+
+// RemoveHandler 알림 핸들러를 제거합니다.
+func (n *SimpleNotifier) RemoveHandler(handler Notifier) <span class="cov8" title="1">{
+        n.mu.Lock()
+        defer n.mu.Unlock()
+        for i, h := range n.handlers </span><span class="cov8" title="1">{
+                if h == handler </span><span class="cov8" title="1">{
+                        n.handlers = append(n.handlers[:i], n.handlers[i+1:]...)
+                        break</span>
+                }
+        }
+}
+
+// Notify 알림을 처리하고 이벤트를 발행합니다.
+func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error <span class="cov8" title="1">{
+        n.mu.RLock()
+        defer n.mu.RUnlock()
+
+        // 모든 핸들러에게 알림 전달
+        for _, handler := range n.handlers </span><span class="cov8" title="1">{
+                if err := handler.Notify(ctx, alert); err != nil </span><span class="cov0" title="0">{
+                        // 에러가 발생해도 다른 핸들러는 계속 실행
+                        continue</span>
+                }
+        }
+
+        // 알림 이벤트 발행
+        <span class="cov8" title="1">event := events.Event{
+                Type:      events.TypeAlertTriggered,
+                Source:    alert.Source,
+                Timestamp: alert.Timestamp,
+                Payload:   alert,
+        }
+
+        return n.publisher.Publish(ctx, event)</span>
+}
+</pre>
+
+                <pre class="file" id="file7" style="display: none">package events
+
+import (
+        "context"
+        "sync"
+        "time"
+
+        "github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
+)
+
+// EventType 이벤트의 종류를 나타냅니다.
+type EventType string
+
+const (
+        TypeMetricCollected EventType = "METRIC_COLLECTED"
+        TypeAlertTriggered  EventType = "ALERT_TRIGGERED"
+)
+
+// Event 모니터링 시스템의 이벤트를 나타냅니다.
+type Event struct {
+        Type      EventType         `json:"type"`
+        Source    string            `json:"source"`
+        Timestamp time.Time         `json:"timestamp"`
+        Payload   interface{}       `json:"payload"`
+        Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
+// MetricPayload 메트릭 수집 이벤트의 페이로드입니다.
+type MetricPayload struct {
+        Metrics []metrics.Metric `json:"metrics"`
+}
+
+// Handler 이벤트를 처리하는 핸들러입니다.
+type Handler interface {
+        Handle(ctx context.Context, event Event) error
+}
+
+// Publisher 이벤트를 발행하는 인터페이스입니다.
+type Publisher interface {
+        Publish(ctx context.Context, event Event) error
+        Subscribe(handler Handler) error
+        Unsubscribe(handler Handler) error
+}
+
+// SimplePublisher 기본적인 이벤트 발행자 구현체입니다.
+type SimplePublisher struct {
+        mu       sync.RWMutex
+        handlers []Handler
+}
+
+// NewSimplePublisher 새로운 SimplePublisher를 생성합니다.
+func NewSimplePublisher() *SimplePublisher <span class="cov8" title="1">{
+        return &amp;SimplePublisher{
+                handlers: make([]Handler, 0),
+        }
+}</span>
+
+// Publish 이벤트를 발행합니다.
+func (p *SimplePublisher) Publish(ctx context.Context, event Event) error <span class="cov8" title="1">{
+        p.mu.RLock()
+        defer p.mu.RUnlock()
+
+        for _, handler := range p.handlers </span><span class="cov8" title="1">{
+                if err := handler.Handle(ctx, event); err != nil </span><span class="cov0" title="0">{
+                        // 에러가 발생해도 다른 핸들러는 계속 실행
+                        continue</span>
+                }
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Subscribe 이벤트 핸들러를 등록합니다.
+func (p *SimplePublisher) Subscribe(handler Handler) error <span class="cov8" title="1">{
+        p.mu.Lock()
+        defer p.mu.Unlock()
+
+        p.handlers = append(p.handlers, handler)
+        return nil
+}</span>
+
+// Unsubscribe 이벤트 핸들러를 제거합니다.
+func (p *SimplePublisher) Unsubscribe(handler Handler) error <span class="cov8" title="1">{
+        p.mu.Lock()
+        defer p.mu.Unlock()
+
+        for i, h := range p.handlers </span><span class="cov8" title="1">{
+                if h == handler </span><span class="cov8" title="1">{
+                        p.handlers = append(p.handlers[:i], p.handlers[i+1:]...)
+                        break</span>
+                }
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+
+                <pre class="file" id="file8" style="display: none">package prometheus
+
+import (
+        "context"
+        "fmt"
+        "sync"
+
+        "github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
+        "github.com/prometheus/client_golang/prometheus"
+)
+
+// Exporter Prometheus 익스포터 구현체입니다.
+type Exporter struct {
+        mu       sync.RWMutex
+        registry *prometheus.Registry
+        metrics  map[string]prometheus.Collector
+}
+
+// NewExporter 새로운 Exporter를 생성합니다.
+func NewExporter() *Exporter <span class="cov8" title="1">{
+        return &amp;Exporter{
+                registry: prometheus.NewRegistry(),
+                metrics:  make(map[string]prometheus.Collector),
+        }
+}</span>
+
+// Export 메트릭을 Prometheus 형식으로 변환하여 등록합니다.
+func (e *Exporter) Export(_ context.Context, metrics []metrics.Metric) error <span class="cov8" title="1">{
+        e.mu.Lock()
+        defer e.mu.Unlock()
+
+        for _, m := range metrics </span><span class="cov8" title="1">{
+                collector, err := e.getOrCreateCollector(m)
+                if err != nil </span><span class="cov8" title="1">{
+                        return fmt.Errorf("메트릭 컬렉터 생성 실패: %w", err)
+                }</span>
+
+                <span class="cov8" title="1">switch m.Type </span>{
+                case "counter":<span class="cov8" title="1">
+                        if counter, ok := collector.(prometheus.Counter); ok </span><span class="cov8" title="1">{
+                                counter.Add(m.Value)
+                        }</span>
+                case "gauge":<span class="cov8" title="1">
+                        if gauge, ok := collector.(prometheus.Gauge); ok </span><span class="cov8" title="1">{
+                                gauge.Set(m.Value)
+                        }</span>
+                case "histogram":<span class="cov8" title="1">
+                        if histogram, ok := collector.(prometheus.Histogram); ok </span><span class="cov8" title="1">{
+                                histogram.Observe(m.Value)
+                        }</span>
+                case "summary":<span class="cov8" title="1">
+                        if summary, ok := collector.(prometheus.Summary); ok </span><span class="cov8" title="1">{
+                                summary.Observe(m.Value)
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// GetRegistry Prometheus 레지스트리를 반환합니다.
+func (e *Exporter) GetRegistry() *prometheus.Registry <span class="cov0" title="0">{
+        return e.registry
+}</span>
+
+// getOrCreateCollector 메트릭에 대한 Prometheus 컬렉터를 반환하거나 생성합니다.
+func (e *Exporter) getOrCreateCollector(m metrics.Metric) (prometheus.Collector, error) <span class="cov8" title="1">{
+        if collector, exists := e.metrics[m.Name]; exists </span><span class="cov8" title="1">{
+                return collector, nil
+        }</span>
+
+        <span class="cov8" title="1">var collector prometheus.Collector
+
+        switch m.Type </span>{
+        case "counter":<span class="cov8" title="1">
+                collector = prometheus.NewCounter(prometheus.CounterOpts{
+                        Name: m.Name,
+                        Help: m.Description,
+                })</span>
+        case "gauge":<span class="cov8" title="1">
+                collector = prometheus.NewGauge(prometheus.GaugeOpts{
+                        Name: m.Name,
+                        Help: m.Description,
+                })</span>
+        case "histogram":<span class="cov8" title="1">
+                collector = prometheus.NewHistogram(prometheus.HistogramOpts{
+                        Name: m.Name,
+                        Help: m.Description,
+                })</span>
+        case "summary":<span class="cov8" title="1">
+                collector = prometheus.NewSummary(prometheus.SummaryOpts{
+                        Name: m.Name,
+                        Help: m.Description,
+                })</span>
+        default:<span class="cov8" title="1">
+                return nil, fmt.Errorf("지원하지 않는 메트릭 타입: %s", m.Type)</span>
+        }
+
+        <span class="cov8" title="1">if err := e.registry.Register(collector); err != nil </span><span class="cov0"
+                                                                                                       title="0">{
+                return nil, fmt.Errorf("메트릭 등록 실패: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">e.metrics[m.Name] = collector
+        return collector, nil</span>
+}
+</pre>
+
+                <pre class="file" id="file9" style="display: none">package metrics
 
 import (
         "context"
@@ -786,21 +1096,24 @@ import (
         "time"
 )
 
-// MetricType 메트릭의 종류를 나타냅니다.
+// MetricType 메트릭의 타입을 나타냅니다.
 type MetricType string
 
 const (
-        TypeGauge   MetricType = "GAUGE"
-        TypeCounter MetricType = "COUNTER"
+        TypeCounter   MetricType = "counter"
+        TypeGauge     MetricType = "gauge"
+        TypeHistogram MetricType = "histogram"
+        TypeSummary   MetricType = "summary"
 )
 
-// Metric 수집된 메트릭을 나타냅니다.
+// Metric 모니터링 시스템의 메트릭을 나타냅니다.
 type Metric struct {
-        Name      string            `json:"name"`
-        Type      MetricType        `json:"type"`
-        Value     float64           `json:"value"`
-        Labels    map[string]string `json:"labels"`
-        Timestamp time.Time         `json:"timestamp"`
+        Name        string            `json:"name"`
+        Type        MetricType        `json:"type"`
+        Value       float64           `json:"value"`
+        Labels      map[string]string `json:"labels,omitempty"`
+        Timestamp   time.Time         `json:"timestamp"`
+        Description string            `json:"description"`
 }
 
 // Collector 메트릭을 수집하는 인터페이스입니다.
@@ -809,7 +1122,7 @@ type Collector interface {
         Collect(ctx context.Context) ([]Metric, error)
 }
 
-// SimpleCollector 기본적인 메트릭 수집 구현체입니다.
+// SimpleCollector 기본적인 메트릭 수집기 구현체입니다.
 type SimpleCollector struct {
         mu      sync.RWMutex
         metrics []Metric
@@ -822,35 +1135,32 @@ func NewSimpleCollector() *SimpleCollector <span class="cov8" title="1">{
         }
 }</span>
 
-// Collect 현재 저장된 메트릭을 반환합니다.
+// Collect 수집된 메트릭을 반환합니다.
 func (c *SimpleCollector) Collect(_ context.Context) ([]Metric, error) <span class="cov8" title="1">{
         c.mu.RLock()
         defer c.mu.RUnlock()
-
-        result := make([]Metric, len(c.metrics))
-        copy(result, c.metrics)
-        return result, nil
+        return c.metrics, nil
 }</span>
 
-// AddMetric 새로운 메트릭을 추가합니다.
+// AddMetric 메트릭을 추가합니다.
 func (c *SimpleCollector) AddMetric(metric Metric) <span class="cov8" title="1">{
         c.mu.Lock()
         defer c.mu.Unlock()
+        if metric.Timestamp.IsZero() </span><span class="cov8" title="1">{
+                metric.Timestamp = time.Now()
+        }</span>
+        <span class="cov8" title="1">c.metrics = append(c.metrics, metric)</span>
+}
 
-        metric.Timestamp = time.Now()
-        c.metrics = append(c.metrics, metric)
-}</span>
-
-// Reset 저장된 메트릭을 초기화합니다.
+// Reset 수집된 메트릭을 초기화합니다.
 func (c *SimpleCollector) Reset() <span class="cov8" title="1">{
         c.mu.Lock()
         defer c.mu.Unlock()
-
         c.metrics = make([]Metric, 0)
 }</span>
 </pre>
 
-                <pre class="file" id="file7" style="display: none">package github
+                <pre class="file" id="file10" style="display: none">package github
 
 import (
         "context"
@@ -923,7 +1233,7 @@ func (c *ActionCollector) AddActionMetric(actionMetric ActionMetric) <span class
 }</span>
 </pre>
 
-                <pre class="file" id="file8" style="display: none">package health
+                <pre class="file" id="file11" style="display: none">package health
 
 import (
         "context"
