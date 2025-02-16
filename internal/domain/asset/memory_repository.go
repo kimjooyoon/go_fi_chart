@@ -10,29 +10,34 @@ import (
 )
 
 // MemoryRepository 인메모리 저장소 구현체
-type MemoryRepository[T domain.Entity] struct {
+type MemoryRepository[T any] struct {
 	data  map[string]T
 	mutex sync.RWMutex
 }
 
 // NewMemoryRepository 새로운 인메모리 저장소를 생성합니다.
-func NewMemoryRepository[T domain.Entity]() *MemoryRepository[T] {
+func NewMemoryRepository[T any]() *MemoryRepository[T] {
 	return &MemoryRepository[T]{
 		data: make(map[string]T),
 	}
 }
 
 // Save 엔티티를 저장합니다.
-func (r *MemoryRepository[T]) Save(_ context.Context, entity T) error {
+func (r *MemoryRepository[T]) Save(_ context.Context, entity interface{}) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	if _, exists := r.data[entity.GetID()]; exists {
-		return domain.NewRepositoryError("Save", fmt.Errorf("entity with ID %s already exists", entity.GetID()))
-	}
+	if e, ok := entity.(domain.Entity); ok {
+		if _, exists := r.data[e.GetID()]; exists {
+			return domain.NewRepositoryError("Save", fmt.Errorf("entity with ID %s already exists", e.GetID()))
+		}
 
-	r.data[entity.GetID()] = entity
-	return nil
+		if t, ok := entity.(T); ok {
+			r.data[e.GetID()] = t
+			return nil
+		}
+	}
+	return domain.NewRepositoryError("Save", fmt.Errorf("invalid entity type"))
 }
 
 // FindByID ID로 엔티티를 조회합니다.
@@ -49,16 +54,21 @@ func (r *MemoryRepository[T]) FindByID(_ context.Context, id string) (T, error) 
 }
 
 // Update 엔티티를 업데이트합니다.
-func (r *MemoryRepository[T]) Update(_ context.Context, entity T) error {
+func (r *MemoryRepository[T]) Update(_ context.Context, entity interface{}) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	if _, exists := r.data[entity.GetID()]; !exists {
-		return domain.NewRepositoryError("Update", fmt.Errorf("entity with ID %s not found", entity.GetID()))
-	}
+	if e, ok := entity.(domain.Entity); ok {
+		if _, exists := r.data[e.GetID()]; !exists {
+			return domain.NewRepositoryError("Update", fmt.Errorf("entity with ID %s not found", e.GetID()))
+		}
 
-	r.data[entity.GetID()] = entity
-	return nil
+		if t, ok := entity.(T); ok {
+			r.data[e.GetID()] = t
+			return nil
+		}
+	}
+	return domain.NewRepositoryError("Update", fmt.Errorf("invalid entity type"))
 }
 
 // Delete ID로 엔티티를 삭제합니다.

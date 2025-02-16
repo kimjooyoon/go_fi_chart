@@ -68,7 +68,7 @@
                         </option>
 
                         <option value="file5">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go
-                                (52.3%)
+                                (52.8%)
                         </option>
 
                         <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (59.3%)
@@ -922,29 +922,34 @@ import (
 )
 
 // MemoryRepository 인메모리 저장소 구현체
-type MemoryRepository[T domain.Entity] struct {
+type MemoryRepository[T any] struct {
         data  map[string]T
         mutex sync.RWMutex
 }
 
 // NewMemoryRepository 새로운 인메모리 저장소를 생성합니다.
-func NewMemoryRepository[T domain.Entity]() *MemoryRepository[T] <span class="cov8" title="1">{
+func NewMemoryRepository[T any]() *MemoryRepository[T] <span class="cov8" title="1">{
         return &amp;MemoryRepository[T]{
                 data: make(map[string]T),
         }
 }</span>
 
 // Save 엔티티를 저장합니다.
-func (r *MemoryRepository[T]) Save(_ context.Context, entity T) error <span class="cov8" title="1">{
+func (r *MemoryRepository[T]) Save(_ context.Context, entity interface{}) error <span class="cov8" title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
-        if _, exists := r.data[entity.GetID()]; exists </span><span class="cov0" title="0">{
-                return domain.NewRepositoryError("Save", fmt.Errorf("entity with ID %s already exists", entity.GetID()))
-        }</span>
+        if e, ok := entity.(domain.Entity); ok </span><span class="cov8" title="1">{
+                if _, exists := r.data[e.GetID()]; exists </span><span class="cov0" title="0">{
+                        return domain.NewRepositoryError("Save", fmt.Errorf("entity with ID %s already exists", e.GetID()))
+                }</span>
 
-        <span class="cov8" title="1">r.data[entity.GetID()] = entity
-        return nil</span>
+                <span class="cov8" title="1">if t, ok := entity.(T); ok </span><span class="cov8" title="1">{
+                        r.data[e.GetID()] = t
+                        return nil
+                }</span>
+        }
+        <span class="cov0" title="0">return domain.NewRepositoryError("Save", fmt.Errorf("invalid entity type"))</span>
 }
 
 // FindByID ID로 엔티티를 조회합니다.
@@ -961,16 +966,22 @@ func (r *MemoryRepository[T]) FindByID(_ context.Context, id string) (T, error) 
 }
 
 // Update 엔티티를 업데이트합니다.
-func (r *MemoryRepository[T]) Update(_ context.Context, entity T) error <span class="cov8" title="1">{
+func (r *MemoryRepository[T]) Update(_ context.Context, entity interface{}) error <span class="cov8" title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
-        if _, exists := r.data[entity.GetID()]; !exists </span><span class="cov0" title="0">{
-                return domain.NewRepositoryError("Update", fmt.Errorf("entity with ID %s not found", entity.GetID()))
-        }</span>
+        if e, ok := entity.(domain.Entity); ok </span><span class="cov8" title="1">{
+                if _, exists := r.data[e.GetID()]; !exists </span><span class="cov0" title="0">{
+                        return domain.NewRepositoryError("Update", fmt.Errorf("entity with ID %s not found", e.GetID()))
+                }</span>
 
-        <span class="cov8" title="1">r.data[entity.GetID()] = entity
-        return nil</span>
+                <span class="cov8" title="1">if t, ok := entity.(T); ok </span><span class="cov8" title="1">{
+                        r.data[e.GetID()] = t
+                        return nil
+                }</span>
+        }
+        <span class="cov0"
+              title="0">return domain.NewRepositoryError("Update", fmt.Errorf("invalid entity type"))</span>
 }
 
 // Delete ID로 엔티티를 삭제합니다.
