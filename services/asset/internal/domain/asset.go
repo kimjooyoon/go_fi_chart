@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/google/uuid"
 )
@@ -28,12 +29,13 @@ type Asset struct {
 	Amount    valueobjects.Money
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	events    []events.Event
 }
 
 // NewAsset 새로운 자산을 생성합니다.
 func NewAsset(userID string, assetType AssetType, name string, amount valueobjects.Money) *Asset {
 	now := time.Now()
-	return &Asset{
+	asset := &Asset{
 		ID:        uuid.New().String(),
 		UserID:    userID,
 		Type:      assetType,
@@ -41,15 +43,53 @@ func NewAsset(userID string, assetType AssetType, name string, amount valueobjec
 		Amount:    amount,
 		CreatedAt: now,
 		UpdatedAt: now,
+		events:    make([]events.Event, 0),
 	}
+
+	asset.events = append(asset.events, NewAssetCreatedEvent(asset))
+	return asset
 }
 
 // Update 자산 정보를 업데이트합니다.
 func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Money) {
+	prevAmount := a.Amount
 	a.Name = name
 	a.Type = assetType
 	a.Amount = amount
 	a.UpdatedAt = time.Now()
+
+	a.events = append(a.events, NewAssetUpdatedEvent(a))
+	if !prevAmount.Equals(amount) {
+		a.events = append(a.events, NewAssetAmountChangedEvent(a, prevAmount))
+	}
+}
+
+// UpdateAmount 자산의 금액을 업데이트합니다.
+func (a *Asset) UpdateAmount(amount valueobjects.Money) {
+	if a.Amount.Equals(amount) {
+		return
+	}
+
+	prevAmount := a.Amount
+	a.Amount = amount
+	a.UpdatedAt = time.Now()
+
+	a.events = append(a.events, NewAssetAmountChangedEvent(a, prevAmount))
+}
+
+// MarkAsDeleted 자산을 삭제 상태로 표시합니다.
+func (a *Asset) MarkAsDeleted() {
+	a.events = append(a.events, NewAssetDeletedEvent(a))
+}
+
+// Events 발생한 이벤트 목록을 반환합니다.
+func (a *Asset) Events() []events.Event {
+	return a.events
+}
+
+// ClearEvents 이벤트 목록을 초기화합니다.
+func (a *Asset) ClearEvents() {
+	a.events = make([]events.Event, 0)
 }
 
 // Associate는 자산을 다른 통화로 변환합니다.
