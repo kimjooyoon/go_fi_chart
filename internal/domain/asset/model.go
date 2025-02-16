@@ -392,47 +392,67 @@ func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio {
 	}
 }
 
-// AddEvent 새로운 이벤트를 추가합니다.
-func (a *Asset) AddEvent(event event.Event) {
-	a.events = append(a.events, event)
+// AddEvent 이벤트를 추가합니다.
+func (a *Asset) AddEvent(evt event.Event) {
+	if a.events == nil {
+		a.events = make([]event.Event, 0)
+	}
+	a.events = append(a.events, evt)
 }
 
-// GetUncommittedEvents 미발행 이벤트 목록을 반환합니다.
+// GetUncommittedEvents 미발행 이벤트를 반환합니다.
 func (a *Asset) GetUncommittedEvents() []event.Event {
 	return a.events
 }
 
-// ClearEvents 미발행 이벤트를 모두 제거합니다.
+// ClearEvents 이벤트를 초기화합니다.
 func (a *Asset) ClearEvents() {
 	a.events = make([]event.Event, 0)
 }
 
-// ProcessTransaction 거래를 처리하고 이벤트를 발행합니다.
+// ProcessTransaction 거래를 처리합니다.
 func (a *Asset) ProcessTransaction(tx *Transaction) error {
 	if err := a.ValidateTransaction(tx); err != nil {
 		return err
 	}
 
 	switch tx.Type {
-	case Income, Transfer:
-		a.Amount, _ = a.Amount.Add(tx.Amount)
+	case Income:
+		result, err := a.Amount.Add(tx.Amount)
+		if err != nil {
+			return err
+		}
+		a.Amount = result
 	case Expense:
-		a.Amount, _ = a.Amount.Subtract(tx.Amount)
+		result, err := a.Amount.Subtract(tx.Amount)
+		if err != nil {
+			return err
+		}
+		a.Amount = result
+	case Transfer:
+		result, err := a.Amount.Subtract(tx.Amount)
+		if err != nil {
+			return err
+		}
+		a.Amount = result
 	}
 
 	a.UpdatedAt = time.Now()
 
 	// 거래 처리 이벤트 발행
 	a.AddEvent(event.NewEvent(
-		"asset.transaction.processed",
+		event.TypeTransactionRecorded,
+		a.ID,
 		"asset",
 		map[string]interface{}{
-			"assetId":       a.ID,
-			"transactionId": tx.ID,
+			"transactionID": tx.ID,
 			"type":          tx.Type,
-			"amount":        tx.Amount.Amount,
-			"newBalance":    a.Amount.Amount,
+			"amount":        tx.Amount,
 		},
+		map[string]string{
+			"userID": a.UserID,
+		},
+		1,
 	))
 
 	return nil

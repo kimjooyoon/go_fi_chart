@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aske/go_fi_chart/internal/domain"
+	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 )
 
 // AlertLevel 알림의 심각도를 나타냅니다.
@@ -81,15 +81,9 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error {
 	}
 
 	// 알림 이벤트 발행
-	event := domain.NewMonitoringEvent(
-		domain.TypeAlertTriggered,
-		alert.Source,
-		alert,
-		alert.Metadata,
-	)
-
-	if err := n.publisher.Publish(ctx, event); err != nil {
-		return domain.NewError("alerts", domain.ErrCodeInternal, "알림 이벤트 발행 실패")
+	evt := domain.NewMonitoringEvent(domain.TypeAlertTriggered, alert)
+	if err := n.publisher.Publish(ctx, evt); err != nil {
+		return err
 	}
 
 	return nil

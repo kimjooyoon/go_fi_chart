@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
+	"github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -35,22 +35,22 @@ func (e *Exporter) Export(_ context.Context, metrics []metrics.Metric) error {
 			return fmt.Errorf("메트릭 컬렉터 생성 실패: %w", err)
 		}
 
-		switch m.Type {
+		switch m.Type() {
 		case "counter":
 			if counter, ok := collector.(prometheus.Counter); ok {
-				counter.Add(m.Value)
+				counter.Add(m.Value().Raw)
 			}
 		case "gauge":
 			if gauge, ok := collector.(prometheus.Gauge); ok {
-				gauge.Set(m.Value)
+				gauge.Set(m.Value().Raw)
 			}
 		case "histogram":
 			if histogram, ok := collector.(prometheus.Histogram); ok {
-				histogram.Observe(m.Value)
+				histogram.Observe(m.Value().Raw)
 			}
 		case "summary":
 			if summary, ok := collector.(prometheus.Summary); ok {
-				summary.Observe(m.Value)
+				summary.Observe(m.Value().Raw)
 			}
 		}
 	}
@@ -65,41 +65,41 @@ func (e *Exporter) GetRegistry() *prometheus.Registry {
 
 // getOrCreateCollector 메트릭에 대한 Prometheus 컬렉터를 반환하거나 생성합니다.
 func (e *Exporter) getOrCreateCollector(m metrics.Metric) (prometheus.Collector, error) {
-	if collector, exists := e.metrics[m.Name]; exists {
+	if collector, exists := e.metrics[m.Name()]; exists {
 		return collector, nil
 	}
 
 	var collector prometheus.Collector
 
-	switch m.Type {
+	switch m.Type() {
 	case "counter":
 		collector = prometheus.NewCounter(prometheus.CounterOpts{
-			Name: m.Name,
-			Help: m.Description,
+			Name: m.Name(),
+			Help: m.Description(),
 		})
 	case "gauge":
 		collector = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: m.Name,
-			Help: m.Description,
+			Name: m.Name(),
+			Help: m.Description(),
 		})
 	case "histogram":
 		collector = prometheus.NewHistogram(prometheus.HistogramOpts{
-			Name: m.Name,
-			Help: m.Description,
+			Name: m.Name(),
+			Help: m.Description(),
 		})
 	case "summary":
 		collector = prometheus.NewSummary(prometheus.SummaryOpts{
-			Name: m.Name,
-			Help: m.Description,
+			Name: m.Name(),
+			Help: m.Description(),
 		})
 	default:
-		return nil, fmt.Errorf("지원하지 않는 메트릭 타입: %s", m.Type)
+		return nil, fmt.Errorf("지원하지 않는 메트릭 타입: %s", m.Type())
 	}
 
 	if err := e.registry.Register(collector); err != nil {
 		return nil, fmt.Errorf("메트릭 등록 실패: %w", err)
 	}
 
-	e.metrics[m.Name] = collector
+	e.metrics[m.Name()] = collector
 	return collector, nil
 }

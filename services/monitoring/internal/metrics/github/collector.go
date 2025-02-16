@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aske/go_fi_chart/internal/domain"
+	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 )
 
 // ActionStatus GitHub 액션의 상태를 나타냅니다.
@@ -17,18 +17,21 @@ const (
 	ActionStatusInProgress ActionStatus = "in_progress"
 )
 
-// statusToValue ActionStatus를 숫자로 변환합니다.
-func (s ActionStatus) toValue() float64 {
-	switch s {
-	case ActionStatusSuccess:
-		return 0
-	case ActionStatusFailure:
-		return 1
-	case ActionStatusInProgress:
-		return 2
-	default:
-		return -1
-	}
+// MetricType GitHub 메트릭의 타입을 나타냅니다.
+type MetricType string
+
+const (
+	TypeGauge MetricType = "gauge"
+)
+
+// Metric GitHub 메트릭을 나타냅니다.
+type Metric struct {
+	Name        string            `json:"name"`
+	Type        MetricType        `json:"type"`
+	Value       float64           `json:"value"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Timestamp   time.Time         `json:"timestamp"`
+	Description string            `json:"description"`
 }
 
 // ActionMetric GitHub Actions 실행 메트릭을 나타냅니다.
@@ -43,20 +46,20 @@ type ActionMetric struct {
 // ActionCollector GitHub 액션 메트릭을 수집하는 컬렉터입니다.
 type ActionCollector struct {
 	mu        sync.RWMutex
-	metrics   []domain.Metric
+	metrics   []ActionMetric
 	publisher domain.Publisher
 }
 
 // NewActionCollector 새로운 ActionCollector를 생성합니다.
 func NewActionCollector(publisher domain.Publisher) *ActionCollector {
 	return &ActionCollector{
-		metrics:   make([]domain.Metric, 0),
+		metrics:   make([]ActionMetric, 0),
 		publisher: publisher,
 	}
 }
 
 // AddMetric 메트릭을 추가합니다.
-func (c *ActionCollector) AddMetric(metric domain.Metric) error {
+func (c *ActionCollector) AddMetric(metric ActionMetric) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -65,42 +68,37 @@ func (c *ActionCollector) AddMetric(metric domain.Metric) error {
 }
 
 // Collect 수집된 메트릭을 반환하고 이벤트를 발행합니다.
-func (c *ActionCollector) Collect(ctx context.Context) ([]domain.Metric, error) {
+func (c *ActionCollector) Collect(ctx context.Context) ([]ActionMetric, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	metrics := make([]domain.Metric, len(c.metrics))
+	metrics := make([]ActionMetric, len(c.metrics))
 	copy(metrics, c.metrics)
 
-	event := domain.NewMonitoringEvent(domain.TypeMetricCollected, "github-collector", metrics, nil)
-	if err := c.publisher.Publish(ctx, event); err != nil {
+	evt := domain.NewMonitoringEvent(domain.TypeMetricCollected, metrics)
+	if err := c.publisher.Publish(ctx, evt); err != nil {
 		return nil, err
 	}
 
-	c.metrics = make([]domain.Metric, 0)
+	c.metrics = make([]ActionMetric, 0)
 	return metrics, nil
 }
 
-// AddActionMetric GitHub 액션 메트릭을 추가합니다.
-func (c *ActionCollector) AddActionMetric(name string, status ActionStatus) error {
-	return c.AddMetric(domain.Metric{
-		Name:        "github_action_status",
-		Type:        domain.MetricTypeGauge,
-		Value:       status.toValue(),
-		Labels:      map[string]string{"action": name},
-		Description: "GitHub 액션의 상태를 나타냅니다. 0: 성공, 1: 실패, 2: 진행 중",
-		Timestamp:   time.Now(),
+// AddActionStatusMetric GitHub 액션 상태 메트릭을 추가합니다.
+func (c *ActionCollector) AddActionStatusMetric(name string, status ActionStatus) error {
+	return c.AddMetric(ActionMetric{
+		WorkflowName: name,
+		Status:       status,
+		StartedAt:    time.Now(),
 	})
 }
 
-// AddDurationMetric GitHub 액션 실행 시간 메트릭을 추가합니다.
-func (c *ActionCollector) AddDurationMetric(name string, duration time.Duration) error {
-	return c.AddMetric(domain.Metric{
-		Name:        "github_action_duration_seconds",
-		Type:        domain.MetricTypeGauge,
-		Value:       duration.Seconds(),
-		Labels:      map[string]string{"action": name},
-		Description: "GitHub 액션의 실행 시간(초)입니다.",
-		Timestamp:   time.Now(),
+// AddActionDurationMetric GitHub 액션 실행 시간 메트릭을 추가합니다.
+func (c *ActionCollector) AddActionDurationMetric(name string, duration time.Duration) error {
+	return c.AddMetric(ActionMetric{
+		WorkflowName: name,
+		Duration:     duration,
+		StartedAt:    time.Now().Add(-duration),
+		FinishedAt:   time.Now(),
 	})
 }

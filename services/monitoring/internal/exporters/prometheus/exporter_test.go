@@ -3,9 +3,8 @@ package prometheus
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
+	"github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,25 +22,20 @@ func Test_NewExporter_should_create_empty_exporter(t *testing.T) {
 func Test_Exporter_should_export_metrics(t *testing.T) {
 	// Given
 	exporter := NewExporter()
-	now := time.Now()
 
 	testMetrics := []metrics.Metric{
-		{
-			Name:        "test_counter",
-			Type:        metrics.TypeCounter,
-			Value:       42.0,
-			Labels:      map[string]string{"label": "value"},
-			Timestamp:   now,
-			Description: "Test counter metric",
-		},
-		{
-			Name:        "test_gauge",
-			Type:        metrics.TypeGauge,
-			Value:       123.45,
-			Labels:      map[string]string{"label": "value"},
-			Timestamp:   now,
-			Description: "Test gauge metric",
-		},
+		metrics.NewBaseMetric(
+			"test_counter",
+			metrics.TypeCounter,
+			metrics.NewValue(42.0, map[string]string{"label": "value"}),
+			"Test counter metric",
+		),
+		metrics.NewBaseMetric(
+			"test_gauge",
+			metrics.TypeGauge,
+			metrics.NewValue(123.45, map[string]string{"label": "value"}),
+			"Test gauge metric",
+		),
 	}
 
 	// When
@@ -64,37 +58,32 @@ func Test_Exporter_should_export_metrics(t *testing.T) {
 func Test_Exporter_should_handle_different_metric_types(t *testing.T) {
 	// Given
 	exporter := NewExporter()
-	now := time.Now()
 
 	testMetrics := []metrics.Metric{
-		{
-			Name:        "test_counter",
-			Type:        metrics.TypeCounter,
-			Value:       1.0,
-			Timestamp:   now,
-			Description: "Test counter",
-		},
-		{
-			Name:        "test_gauge",
-			Type:        metrics.TypeGauge,
-			Value:       2.0,
-			Timestamp:   now,
-			Description: "Test gauge",
-		},
-		{
-			Name:        "test_histogram",
-			Type:        metrics.TypeHistogram,
-			Value:       3.0,
-			Timestamp:   now,
-			Description: "Test histogram",
-		},
-		{
-			Name:        "test_summary",
-			Type:        metrics.TypeSummary,
-			Value:       4.0,
-			Timestamp:   now,
-			Description: "Test summary",
-		},
+		metrics.NewBaseMetric(
+			"test_counter",
+			metrics.TypeCounter,
+			metrics.NewValue(1.0, nil),
+			"Test counter",
+		),
+		metrics.NewBaseMetric(
+			"test_gauge",
+			metrics.TypeGauge,
+			metrics.NewValue(2.0, nil),
+			"Test gauge",
+		),
+		metrics.NewBaseMetric(
+			"test_histogram",
+			metrics.TypeHistogram,
+			metrics.NewValue(3.0, nil),
+			"Test histogram",
+		),
+		metrics.NewBaseMetric(
+			"test_summary",
+			metrics.TypeSummary,
+			metrics.NewValue(4.0, nil),
+			"Test summary",
+		),
 	}
 
 	// When
@@ -112,21 +101,24 @@ func Test_Exporter_should_handle_different_metric_types(t *testing.T) {
 func Test_Exporter_should_update_existing_metrics(t *testing.T) {
 	// Given
 	exporter := NewExporter()
-	now := time.Now()
 
-	metric := metrics.Metric{
-		Name:        "test_counter",
-		Type:        metrics.TypeCounter,
-		Value:       1.0,
-		Timestamp:   now,
-		Description: "Test counter",
-	}
+	metric := metrics.NewBaseMetric(
+		"test_counter",
+		metrics.TypeCounter,
+		metrics.NewValue(1.0, nil),
+		"Test counter",
+	)
 
 	// When
 	err := exporter.Export(context.Background(), []metrics.Metric{metric})
 	assert.NoError(t, err)
 
-	metric.Value = 2.0
+	metric = metrics.NewBaseMetric(
+		"test_counter",
+		metrics.TypeCounter,
+		metrics.NewValue(2.0, nil),
+		"Test counter",
+	)
 	err = exporter.Export(context.Background(), []metrics.Metric{metric})
 
 	// Then
@@ -142,17 +134,27 @@ func Test_Exporter_should_update_existing_metrics(t *testing.T) {
 	assert.Equal(t, 3.0, family.GetMetric()[0].GetCounter().GetValue())
 }
 
+type invalidMetric struct {
+	name        string
+	metricType  metrics.Type
+	value       metrics.Value
+	description string
+}
+
+func (m *invalidMetric) Name() string         { return m.name }
+func (m *invalidMetric) Type() metrics.Type   { return "invalid" }
+func (m *invalidMetric) Value() metrics.Value { return m.value }
+func (m *invalidMetric) Description() string  { return m.description }
+
 func Test_Exporter_should_handle_invalid_metric_type(t *testing.T) {
 	// Given
 	exporter := NewExporter()
-	now := time.Now()
 
-	metric := metrics.Metric{
-		Name:        "test_invalid",
-		Type:        "invalid",
-		Value:       1.0,
-		Timestamp:   now,
-		Description: "Test invalid metric",
+	metric := &invalidMetric{
+		name:        "test_invalid",
+		metricType:  "invalid",
+		value:       metrics.NewValue(1.0, nil),
+		description: "Test invalid metric",
 	}
 
 	// When
@@ -166,15 +168,13 @@ func Test_Exporter_should_handle_invalid_metric_type(t *testing.T) {
 func Test_Exporter_should_handle_duplicate_registration(t *testing.T) {
 	// Given
 	exporter := NewExporter()
-	now := time.Now()
 
-	metric := metrics.Metric{
-		Name:        "test_counter",
-		Type:        metrics.TypeCounter,
-		Value:       1.0,
-		Timestamp:   now,
-		Description: "Test counter",
-	}
+	metric := metrics.NewBaseMetric(
+		"test_counter",
+		metrics.TypeCounter,
+		metrics.NewValue(1.0, nil),
+		"Test counter",
+	)
 
 	// When
 	err := exporter.Export(context.Background(), []metrics.Metric{metric})

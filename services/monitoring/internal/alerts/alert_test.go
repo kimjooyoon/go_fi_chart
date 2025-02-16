@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aske/go_fi_chart/internal/domain"
+	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -83,8 +83,7 @@ func Test_SimpleNotifier_should_notify_handlers_and_publish_event(t *testing.T) 
 	assert.Equal(t, alert.Message, handler.alerts[0].Message)
 
 	assert.Len(t, publisher.events, 1)
-	assert.Equal(t, domain.TypeAlertTriggered, publisher.events[0].EventType())
-	assert.Equal(t, alert.Source, publisher.events[0].Source())
+	assert.Equal(t, domain.TypeAlertTriggered, publisher.events[0].Type)
 }
 
 func Test_SimpleNotifier_should_remove_handler(t *testing.T) {

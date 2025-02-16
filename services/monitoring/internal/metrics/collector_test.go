@@ -5,7 +5,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aske/go_fi_chart/internal/domain"
+	"github.com/aske/go_fi_chart/internal/domain/event"
+	"github.com/aske/go_fi_chart/services/monitoring/pkg/domain"
+	pkgmetrics "github.com/aske/go_fi_chart/services/monitoring/pkg/metrics"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,18 +16,18 @@ type mockPublisher struct {
 	events []domain.Event
 }
 
-func (p *mockPublisher) Publish(_ context.Context, event domain.Event) error {
+func (p *mockPublisher) Publish(_ context.Context, evt domain.Event) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.events = append(p.events, event)
+	p.events = append(p.events, evt)
 	return nil
 }
 
-func (p *mockPublisher) Subscribe(_ domain.Handler) error {
+func (p *mockPublisher) Subscribe(_ event.Handler) error {
 	return nil
 }
 
-func (p *mockPublisher) Unsubscribe(_ domain.Handler) error {
+func (p *mockPublisher) Unsubscribe(_ event.Handler) error {
 	return nil
 }
 
@@ -45,34 +47,37 @@ func Test_SimpleCollector_should_add_and_collect_metrics(t *testing.T) {
 	// Given
 	publisher := &mockPublisher{events: make([]domain.Event, 0)}
 	collector := NewSimpleCollector(publisher)
-	metric := domain.Metric{
-		Name:  "test_metric",
-		Type:  domain.MetricTypeGauge,
-		Value: 42.0,
-	}
+	metric := pkgmetrics.NewBaseMetric(
+		"test_metric",
+		pkgmetrics.TypeGauge,
+		pkgmetrics.NewValue(42.0, map[string]string{"test": "label"}),
+		"Test metric",
+	)
 
 	// When
-	collector.AddMetric(metric)
+	err := collector.AddMetric(metric)
+	assert.NoError(t, err)
 	metrics, err := collector.Collect(context.Background())
 
 	// Then
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, metric.Name, metrics[0].Name)
-	assert.Equal(t, metric.Value, metrics[0].Value)
+	assert.Equal(t, metric.Name(), metrics[0].Name())
+	assert.Equal(t, metric.Value().Raw, metrics[0].Value().Raw)
 	assert.Len(t, publisher.events, 1)
-	assert.Equal(t, domain.TypeMetricCollected, publisher.events[0].EventType())
+	assert.Equal(t, domain.TypeMetricCollected, publisher.events[0].Type)
 }
 
 func Test_SimpleCollector_should_reset_metrics(t *testing.T) {
 	// Given
 	publisher := &mockPublisher{events: make([]domain.Event, 0)}
 	collector := NewSimpleCollector(publisher)
-	metric := domain.Metric{
-		Name:  "test_metric",
-		Type:  domain.MetricTypeGauge,
-		Value: 42.0,
-	}
+	metric := pkgmetrics.NewBaseMetric(
+		"test_metric",
+		pkgmetrics.TypeGauge,
+		pkgmetrics.NewValue(42.0, map[string]string{"test": "label"}),
+		"Test metric",
+	)
 
 	// When
 	collector.AddMetric(metric)
@@ -94,11 +99,12 @@ func Test_SimpleCollector_should_be_thread_safe(_ *testing.T) {
 	// When
 	go func() {
 		for i := 0; i < iterations; i++ {
-			collector.AddMetric(domain.Metric{
-				Name:  "test_metric",
-				Type:  domain.MetricTypeGauge,
-				Value: float64(i),
-			})
+			collector.AddMetric(pkgmetrics.NewBaseMetric(
+				"test_metric",
+				pkgmetrics.TypeGauge,
+				pkgmetrics.NewValue(float64(i), map[string]string{"test": "label"}),
+				"Test metric",
+			))
 		}
 		done <- true
 	}()
