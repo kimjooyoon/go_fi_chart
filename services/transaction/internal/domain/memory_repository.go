@@ -22,7 +22,7 @@ func NewMemoryTransactionRepository() *MemoryTransactionRepository {
 }
 
 // Save는 새로운 거래를 저장합니다
-func (r *MemoryTransactionRepository) Save(ctx context.Context, transaction *Transaction) error {
+func (r *MemoryTransactionRepository) Save(_ context.Context, transaction *Transaction) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -35,7 +35,7 @@ func (r *MemoryTransactionRepository) Save(ctx context.Context, transaction *Tra
 }
 
 // FindByID는 ID로 거래를 조회합니다
-func (r *MemoryTransactionRepository) FindByID(ctx context.Context, id uuid.UUID) (*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByID(_ context.Context, id uuid.UUID) (*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -48,7 +48,7 @@ func (r *MemoryTransactionRepository) FindByID(ctx context.Context, id uuid.UUID
 }
 
 // FindByUserID는 사용자 ID로 거래 목록을 조회합니다
-func (r *MemoryTransactionRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByUserID(_ context.Context, userID uuid.UUID) ([]*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -63,7 +63,7 @@ func (r *MemoryTransactionRepository) FindByUserID(ctx context.Context, userID u
 }
 
 // FindByPortfolioID는 포트폴리오 ID로 거래 목록을 조회합니다
-func (r *MemoryTransactionRepository) FindByPortfolioID(ctx context.Context, portfolioID uuid.UUID) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByPortfolioID(_ context.Context, portfolioID uuid.UUID) ([]*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -78,7 +78,7 @@ func (r *MemoryTransactionRepository) FindByPortfolioID(ctx context.Context, por
 }
 
 // FindByAssetID는 자산 ID로 거래 목록을 조회합니다
-func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID uuid.UUID) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID uuid.UUID) ([]*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -93,7 +93,7 @@ func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID
 }
 
 // Update는 기존 거래를 업데이트합니다
-func (r *MemoryTransactionRepository) Update(ctx context.Context, transaction *Transaction) error {
+func (r *MemoryTransactionRepository) Update(_ context.Context, transaction *Transaction) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

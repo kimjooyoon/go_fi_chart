@@ -16,10 +16,13 @@ import (
 )
 
 func main() {
+	serverCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// 환경 변수 로드
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8082" // Asset, Portfolio 서비스와 다른 포트 사용
+		port = "8080"
 	}
 
 	// 라우터 설정
@@ -32,6 +35,14 @@ func main() {
 	handler := api.NewHandler()
 	handler.RegisterRoutes(r)
 
+	// 서버 종료 시그널 처리
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+		cancel()
+	}()
+
 	// 서버 설정
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
@@ -40,38 +51,18 @@ func main() {
 	}
 
 	// 서버 시작
-	serverCtx, serverStopCtx := context.WithCancel(context.Background())
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
-		<-sig
-
-		// Shutdown signal with grace period of 30 seconds
-		shutdownCtx, _ := context.WithTimeout(serverCtx, 30*time.Second)
-
-		go func() {
-			<-shutdownCtx.Done()
-			if shutdownCtx.Err() == context.DeadlineExceeded {
-				log.Fatal("graceful shutdown timed out.. forcing exit.")
-			}
-		}()
-
-		// Trigger graceful shutdown
-		err := server.Shutdown(shutdownCtx)
-		if err != nil {
-			log.Fatal(err)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("서버 시작 실패: %v", err)
 		}
-		serverStopCtx()
 	}()
 
-	// 서버 시작
-	log.Printf("Transaction 서비스 시작 (포트: %s)\n", port)
-	err := server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
-	}
-
-	// 종료 대기
+	// 서버 종료 대기
 	<-serverCtx.Done()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel() // shutdown context의 cancel 함수를 호출합니다.
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("서버 종료 중 오류 발생: %v", err)
+	}
 }

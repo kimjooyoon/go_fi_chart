@@ -62,10 +62,6 @@ type TransactionResponse struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
 // CreateTransaction은 새로운 거래를 생성합니다
 func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	var req createTransactionRequest

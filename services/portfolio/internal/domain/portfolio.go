@@ -133,19 +133,19 @@ var (
 	ErrAssetNotFound = NewDomainError("asset_not_found", "자산을 찾을 수 없습니다")
 )
 
-// DomainError 도메인 에러를 나타냅니다.
-type DomainError struct {
+// Error 도메인 에러를 나타냅니다.
+type Error struct {
 	Code    string
 	Message string
 }
 
-func (e DomainError) Error() string {
+func (e Error) Error() string {
 	return e.Message
 }
 
 // NewDomainError 새로운 도메인 에러를 생성합니다.
 func NewDomainError(code string, message string) error {
-	return DomainError{
+	return Error{
 		Code:    code,
 		Message: message,
 	}
