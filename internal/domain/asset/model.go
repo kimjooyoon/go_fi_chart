@@ -258,17 +258,17 @@ type Asset struct {
 }
 
 // GetID Entity 인터페이스 구현
-func (a *Asset) GetID() string {
+func (a Asset) GetID() string {
 	return a.ID
 }
 
 // GetCreatedAt Entity 인터페이스 구현
-func (a *Asset) GetCreatedAt() time.Time {
+func (a Asset) GetCreatedAt() time.Time {
 	return a.CreatedAt
 }
 
 // GetUpdatedAt Entity 인터페이스 구현
-func (a *Asset) GetUpdatedAt() time.Time {
+func (a Asset) GetUpdatedAt() time.Time {
 	return a.UpdatedAt
 }
 
