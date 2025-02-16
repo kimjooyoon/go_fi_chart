@@ -66,6 +66,14 @@
 - 유틸리티 메서드 구현 (Split, Extend, Shift)
 - 테스트 코드 작성 및 검증
 
+- [x] Value Object 구현: Money
+- 기본 구조 정의
+- 유효성 검사 구현
+- 연산 메서드 구현 (Add, Subtract, Multiply, Divide)
+- 비교 메서드 구현 (Equals, GreaterThan, LessThan)
+- 테스트 코드 작성 및 검증
+- 테스트 픽스처 구현
+
 ## 작업 완료 기록 방법
 1. 날짜별로 구분하여 기록
 2. 완료된 작업은 체크박스에 체크 표시

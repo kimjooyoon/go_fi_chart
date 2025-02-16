@@ -16,14 +16,17 @@ func Test_NewAsset_should_create_asset_with_valid_data(t *testing.T) {
 	currency := "KRW"
 
 	// When
-	asset := NewAsset(userID, assetType, name, amount, currency)
+	asset, err := NewAsset(userID, assetType, name, amount, currency)
 
 	// Then
+	assert.NoError(t, err)
 	assert.NotEmpty(t, asset.ID)
 	assert.Equal(t, userID, asset.UserID)
 	assert.Equal(t, assetType, asset.Type)
 	assert.Equal(t, name, asset.Name)
-	assert.Equal(t, Money{Amount: amount, Currency: currency}, asset.Amount)
+	money, err := NewMoney(amount, currency)
+	assert.NoError(t, err)
+	assert.Equal(t, money, asset.Amount)
 	assert.NotZero(t, asset.CreatedAt)
 	assert.NotZero(t, asset.UpdatedAt)
 	assert.Equal(t, asset.CreatedAt, asset.UpdatedAt)
@@ -33,7 +36,7 @@ func Test_NewTransaction_should_create_transaction_with_valid_data(t *testing.T)
 	// Given
 	assetID := "test-asset-1"
 	txType := Income
-	money := NewMoney(500000, "KRW")
+	money := NewTestMoney(500000, "KRW")
 	category := "급여"
 	description := "3월 급여"
 
@@ -494,4 +497,164 @@ func TestTimeRange_Shift(t *testing.T) {
 	shifted := tr.Shift(24 * time.Hour)
 	assert.Equal(t, now.Add(24*time.Hour), shifted.Start)
 	assert.Equal(t, later.Add(24*time.Hour), shifted.End)
+}
+
+func TestNewMoney(t *testing.T) {
+	tests := []struct {
+		name     string
+		amount   float64
+		currency string
+		wantErr  bool
+	}{
+		{
+			name:     "유효한 금액과 통화",
+			amount:   1000.0,
+			currency: "KRW",
+			wantErr:  false,
+		},
+		{
+			name:     "음수 금액",
+			amount:   -1000.0,
+			currency: "KRW",
+			wantErr:  true,
+		},
+		{
+			name:     "빈 통화",
+			amount:   1000.0,
+			currency: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewMoney(tt.amount, tt.currency)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.amount, got.Amount)
+				assert.Equal(t, tt.currency, got.Currency)
+			}
+		})
+	}
+}
+
+func TestMoney_Operations(t *testing.T) {
+	krw1000 := NewTestMoney(1000.0, "KRW")
+	krw500 := NewTestMoney(500.0, "KRW")
+	usd100 := NewTestMoney(100.0, "USD")
+
+	t.Run("Add", func(t *testing.T) {
+		sum, err := krw1000.Add(krw500)
+		assert.NoError(t, err)
+		assert.Equal(t, 1500.0, sum.Amount)
+		assert.Equal(t, "KRW", sum.Currency)
+
+		// 다른 통화 더하기 시도
+		_, err = krw1000.Add(usd100)
+		assert.Error(t, err)
+	})
+
+	t.Run("Subtract", func(t *testing.T) {
+		diff, err := krw1000.Subtract(krw500)
+		assert.NoError(t, err)
+		assert.Equal(t, 500.0, diff.Amount)
+		assert.Equal(t, "KRW", diff.Currency)
+
+		// 다른 통화 빼기 시도
+		_, err = krw1000.Subtract(usd100)
+		assert.Error(t, err)
+
+		// 큰 금액 빼기 시도
+		_, err = krw500.Subtract(krw1000)
+		assert.Error(t, err)
+	})
+
+	t.Run("Multiply", func(t *testing.T) {
+		result, err := krw1000.Multiply(2.0)
+		assert.NoError(t, err)
+		assert.Equal(t, 2000.0, result.Amount)
+		assert.Equal(t, "KRW", result.Currency)
+
+		// 음수 곱하기 시도
+		_, err = krw1000.Multiply(-2.0)
+		assert.Error(t, err)
+	})
+
+	t.Run("Divide", func(t *testing.T) {
+		result, err := krw1000.Divide(2.0)
+		assert.NoError(t, err)
+		assert.Equal(t, 500.0, result.Amount)
+		assert.Equal(t, "KRW", result.Currency)
+
+		// 0으로 나누기 시도
+		_, err = krw1000.Divide(0)
+		assert.Error(t, err)
+
+		// 음수로 나누기 시도
+		_, err = krw1000.Divide(-2.0)
+		assert.Error(t, err)
+	})
+}
+
+func TestMoney_Comparisons(t *testing.T) {
+	krw1000 := NewTestMoney(1000.0, "KRW")
+	krw500 := NewTestMoney(500.0, "KRW")
+	krw1000_2 := NewTestMoney(1000.0, "KRW")
+	usd100 := NewTestMoney(100.0, "USD")
+
+	t.Run("Equals", func(t *testing.T) {
+		assert.True(t, krw1000.Equals(krw1000_2))
+		assert.False(t, krw1000.Equals(krw500))
+		assert.False(t, krw1000.Equals(usd100))
+	})
+
+	t.Run("GreaterThan", func(t *testing.T) {
+		result, err := krw1000.GreaterThan(krw500)
+		assert.NoError(t, err)
+		assert.True(t, result)
+
+		result, err = krw500.GreaterThan(krw1000)
+		assert.NoError(t, err)
+		assert.False(t, result)
+
+		// 다른 통화 비교 시도
+		_, err = krw1000.GreaterThan(usd100)
+		assert.Error(t, err)
+	})
+
+	t.Run("LessThan", func(t *testing.T) {
+		result, err := krw500.LessThan(krw1000)
+		assert.NoError(t, err)
+		assert.True(t, result)
+
+		result, err = krw1000.LessThan(krw500)
+		assert.NoError(t, err)
+		assert.False(t, result)
+
+		// 다른 통화 비교 시도
+		_, err = krw1000.LessThan(usd100)
+		assert.Error(t, err)
+	})
+}
+
+func TestMoney_Checks(t *testing.T) {
+	krw1000 := NewTestMoney(1000.0, "KRW")
+	krw0 := NewTestMoney(0.0, "KRW")
+
+	t.Run("IsZero", func(t *testing.T) {
+		assert.True(t, krw0.IsZero())
+		assert.False(t, krw1000.IsZero())
+	})
+
+	t.Run("IsPositive", func(t *testing.T) {
+		assert.True(t, krw1000.IsPositive())
+		assert.False(t, krw0.IsPositive())
+	})
+
+	t.Run("String", func(t *testing.T) {
+		assert.Equal(t, "1000.00 KRW", krw1000.String())
+		assert.Equal(t, "0.00 KRW", krw0.String())
+	})
 }

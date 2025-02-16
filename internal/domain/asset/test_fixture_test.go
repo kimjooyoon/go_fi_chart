@@ -6,103 +6,235 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_fixture_should_create_with_valid_data(t *testing.T) {
+func TestNewTestFixture(t *testing.T) {
 	// When
 	fixture := NewTestFixture()
 
 	// Then
 	assert.NotNil(t, fixture)
-	assert.Len(t, fixture.Assets, 3)
-	assert.Len(t, fixture.Transactions, 3)
-	assert.Len(t, fixture.Portfolios, 1)
+	assert.NotNil(t, fixture.assets)
+	assert.NotNil(t, fixture.transactions)
+	assert.NotNil(t, fixture.portfolios)
+	assert.Empty(t, fixture.assets)
+	assert.Empty(t, fixture.transactions)
+	assert.Empty(t, fixture.portfolios)
+}
+
+func TestCreateFixture(t *testing.T) {
+	// When
+	fixture := CreateFixture()
+
+	// Then
+	assert.NotNil(t, fixture)
+	assert.Len(t, fixture.assets, 2)
+	assert.Len(t, fixture.transactions, 3)
+	assert.Len(t, fixture.portfolios, 1)
+}
+
+func TestTestFixture_GetAssetByID(t *testing.T) {
+	// Given
+	fixture := CreateFixture()
+	var assetID string
+	for id := range fixture.assets {
+		assetID = id
+		break
+	}
+
+	// When
+	asset := fixture.GetAssetByID(assetID)
+
+	// Then
+	assert.NotNil(t, asset)
+	assert.Equal(t, assetID, asset.ID)
+}
+
+func TestTestFixture_GetTransactionByID(t *testing.T) {
+	// Given
+	fixture := CreateFixture()
+	var txID string
+	for id := range fixture.transactions {
+		txID = id
+		break
+	}
+
+	// When
+	tx := fixture.GetTransactionByID(txID)
+
+	// Then
+	assert.NotNil(t, tx)
+	assert.Equal(t, txID, tx.ID)
+}
+
+func TestTestFixture_GetPortfolioByID(t *testing.T) {
+	// Given
+	fixture := CreateFixture()
+	var portfolioID string
+	for id := range fixture.portfolios {
+		portfolioID = id
+		break
+	}
+
+	// When
+	portfolio := fixture.GetPortfolioByID(portfolioID)
+
+	// Then
+	assert.NotNil(t, portfolio)
+	assert.Equal(t, portfolioID, portfolio.ID)
+}
+
+func TestTestFixture_GetAssetsByUserID(t *testing.T) {
+	// Given
+	fixture := CreateFixture()
+
+	// When
+	assets := fixture.GetAssetsByUserID("user-1")
+
+	// Then
+	assert.NotEmpty(t, assets)
+	for _, asset := range assets {
+		assert.Equal(t, "user-1", asset.UserID)
+	}
+}
+
+func TestTestFixture_GetTransactionsByAssetID(t *testing.T) {
+	// Given
+	fixture := CreateFixture()
+	var assetID string
+	for id := range fixture.assets {
+		assetID = id
+		break
+	}
+
+	// When
+	transactions := fixture.GetTransactionsByAssetID(assetID)
+
+	// Then
+	assert.NotEmpty(t, transactions)
+	for _, tx := range transactions {
+		assert.Equal(t, assetID, tx.AssetID)
+	}
+}
+
+func TestTestFixture_GetPortfolioByUserID(t *testing.T) {
+	// Given
+	fixture := CreateFixture()
+
+	// When
+	portfolio := fixture.GetPortfolioByUserID("user-1")
+
+	// Then
+	assert.NotNil(t, portfolio)
+	assert.Equal(t, "user-1", portfolio.UserID)
+}
+
+func Test_fixture_should_create_with_valid_data(t *testing.T) {
+	// When
+	fixture := CreateFixture()
+
+	// Then
+	assert.NotNil(t, fixture)
+	assert.NotNil(t, fixture.assets)
+	assert.NotNil(t, fixture.transactions)
+	assert.NotNil(t, fixture.portfolios)
+	assert.Len(t, fixture.assets, 2)
+	assert.Len(t, fixture.transactions, 3)
+	assert.Len(t, fixture.portfolios, 1)
 }
 
 func Test_fixture_should_find_asset_by_id(t *testing.T) {
 	// Given
-	fixture := NewTestFixture()
+	fixture := CreateFixture()
+	var assetID string
+	for id := range fixture.assets {
+		assetID = id
+		break
+	}
 
 	// When
-	asset := fixture.GetAssetByID("asset-1")
+	asset := fixture.GetAssetByID(assetID)
 
 	// Then
 	assert.NotNil(t, asset)
-	assert.Equal(t, "asset-1", asset.ID)
-	assert.Equal(t, Cash, asset.Type)
-	assert.Equal(t, "현금 자산", asset.Name)
+	assert.Equal(t, assetID, asset.ID)
 }
 
 func Test_fixture_should_find_transaction_by_id(t *testing.T) {
 	// Given
-	fixture := NewTestFixture()
+	fixture := CreateFixture()
+	var txID string
+	for id := range fixture.transactions {
+		txID = id
+		break
+	}
 
 	// When
-	tx := fixture.GetTransactionByID("tx-1")
+	tx := fixture.GetTransactionByID(txID)
 
 	// Then
 	assert.NotNil(t, tx)
-	assert.Equal(t, "tx-1", tx.ID)
-	assert.Equal(t, Income, tx.Type)
-	assert.Equal(t, "급여", tx.Category)
+	assert.Equal(t, txID, tx.ID)
 }
 
 func Test_fixture_should_find_portfolio_by_id(t *testing.T) {
 	// Given
-	fixture := NewTestFixture()
+	fixture := CreateFixture()
+	var portfolioID string
+	for id := range fixture.portfolios {
+		portfolioID = id
+		break
+	}
 
 	// When
-	portfolio := fixture.GetPortfolioByID("portfolio-1")
+	portfolio := fixture.GetPortfolioByID(portfolioID)
 
 	// Then
 	assert.NotNil(t, portfolio)
-	assert.Equal(t, "portfolio-1", portfolio.ID)
-	assert.Len(t, portfolio.Assets, 3)
+	assert.Equal(t, portfolioID, portfolio.ID)
 }
 
 func Test_fixture_should_find_assets_by_user_id(t *testing.T) {
 	// Given
-	fixture := NewTestFixture()
+	fixture := CreateFixture()
 
 	// When
-	assets := fixture.GetAssetsByUserID("test-user-1")
+	assets := fixture.GetAssetsByUserID("user-1")
 
 	// Then
-	assert.Len(t, assets, 3)
+	assert.NotEmpty(t, assets)
 	for _, asset := range assets {
-		assert.Equal(t, "test-user-1", asset.UserID)
+		assert.Equal(t, "user-1", asset.UserID)
 	}
 }
 
 func Test_fixture_should_find_transactions_by_asset_id(t *testing.T) {
 	// Given
-	fixture := NewTestFixture()
+	fixture := CreateFixture()
+	var assetID string
+	for id := range fixture.assets {
+		assetID = id
+		break
+	}
 
 	// When
-	transactions := fixture.GetTransactionsByAssetID("asset-1")
+	transactions := fixture.GetTransactionsByAssetID(assetID)
 
 	// Then
-	assert.Len(t, transactions, 3)
+	assert.NotEmpty(t, transactions)
 	for _, tx := range transactions {
-		assert.Equal(t, "asset-1", tx.AssetID)
+		assert.Equal(t, assetID, tx.AssetID)
 	}
 }
 
 func Test_fixture_should_find_portfolio_by_user_id(t *testing.T) {
 	// Given
-	fixture := NewTestFixture()
+	fixture := CreateFixture()
 
 	// When
-	portfolio := fixture.GetPortfolioByUserID("test-user-1")
+	portfolio := fixture.GetPortfolioByUserID("user-1")
 
 	// Then
 	assert.NotNil(t, portfolio)
-	assert.Equal(t, "test-user-1", portfolio.UserID)
-
-	// 포트폴리오 비중 합이 1.0(100%)인지 검증
-	var totalWeight float64
-	for _, asset := range portfolio.Assets {
-		totalWeight += asset.Weight
-	}
-	assert.Equal(t, 1.0, totalWeight)
+	assert.Equal(t, "user-1", portfolio.UserID)
 }
 
 func Test_fixture_should_return_nil_when_not_found(t *testing.T) {

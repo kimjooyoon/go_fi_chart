@@ -68,14 +68,14 @@
                         </option>
 
                         <option value="file5">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go
-                                (62.0%)
+                                (52.3%)
                         </option>
 
-                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (49.1%)
+                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (59.3%)
                         </option>
 
                         <option value="file7">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go
-                                (88.2%)
+                                (72.7%)
                         </option>
 
                         <option value="file8">github.com/aske/go_fi_chart/internal/domain/error.go (0.0%)</option>
@@ -288,6 +288,48 @@ import (
         "github.com/go-chi/chi/v5"
 )
 
+// CreateAssetRequest 자산 생성 요청
+type CreateAssetRequest struct {
+        UserID   string  `json:"userId"`
+        Type     string  `json:"type"`
+        Name     string  `json:"name"`
+        Amount   float64 `json:"amount"`
+        Currency string  `json:"currency"`
+}
+
+// UpdateAssetAmountRequest 자산 금액 업데이트 요청
+type UpdateAssetAmountRequest struct {
+        Amount   float64 `json:"amount"`
+        Currency string  `json:"currency"`
+}
+
+// AssetResponse 자산 응답
+type AssetResponse struct {
+        ID        string    `json:"id"`
+        UserID    string    `json:"userId"`
+        Type      string    `json:"type"`
+        Name      string    `json:"name"`
+        Amount    float64   `json:"amount"`
+        Currency  string    `json:"currency"`
+        CreatedAt time.Time `json:"createdAt"`
+        UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// ErrorResponse API 에러 응답 구조체
+type ErrorResponse struct {
+        Code    string `json:"code"`
+        Message string `json:"message"`
+}
+
+// API 에러 코드 상수
+const (
+        ErrInvalidRequest = "INVALID_REQUEST"
+        ErrNotFound       = "NOT_FOUND"
+        ErrInternalServer = "INTERNAL_SERVER_ERROR"
+        ErrValidation     = "VALIDATION_ERROR"
+        ErrNotImplemented = "NOT_IMPLEMENTED"
+)
+
 // Handler API 핸들러입니다.
 type Handler struct {
         assetRepo        asset.Repository
@@ -350,51 +392,46 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) <span clas
         w.WriteHeader(status)
         if data != nil </span><span class="cov0" title="0">{
                 if err := json.NewEncoder(w).Encode(data); err != nil </span><span class="cov0" title="0">{
-                        http.Error(w, err.Error(), http.StatusInternalServerError)
+                        respondError(w, http.StatusInternalServerError, ErrInternalServer, "응답 생성 중 오류가 발생했습니다")
                 }</span>
         }
 }
 
-func respondError(w http.ResponseWriter, status int, message string) <span class="cov0" title="0">{
-        respondJSON(w, status, map[string]string{"error": message})
+func respondError(w http.ResponseWriter, status int, code string, message string) <span class="cov0" title="0">{
+        respondJSON(w, status, ErrorResponse{
+                Code:    code,
+                Message: message,
+        })
 }</span>
 
 // 요청/응답 구조체
-type CreateAssetRequest struct {
-        UserID   string  `json:"userId"`
-        Type     string  `json:"type"`
-        Name     string  `json:"name"`
-        Amount   float64 `json:"amount"`
-        Currency string  `json:"currency"`
-}
-
 type UpdateAssetRequest struct {
         Name     string  `json:"name,omitempty"`
         Amount   float64 `json:"amount,omitempty"`
         Currency string  `json:"currency,omitempty"`
 }
 
-type AssetResponse struct {
-        ID        string    `json:"id"`
-        UserID    string    `json:"userId"`
-        Type      string    `json:"type"`
-        Name      string    `json:"name"`
-        Amount    float64   `json:"amount"`
-        Currency  string    `json:"currency"`
-        CreatedAt time.Time `json:"createdAt"`
-        UpdatedAt time.Time `json:"updatedAt"`
-}
-
+// ListAssets godoc
+// @Summary 사용자의 자산 목록을 조회합니다
+// @Description 특정 사용자의 모든 자산 목록을 반환합니다
+// @Tags assets
+// @Accept json
+// @Produce json
+// @Param userId query string true "사용자 ID"
+// @Success 200 {array} AssetResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /assets [get]
 func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         userID := r.URL.Query().Get("userId")
         if userID == "" </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "사용자 ID가 필요합니다")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "사용자 ID가 필요합니다")
                 return
         }</span>
 
         <span class="cov0" title="0">assets, err := h.assetRepo.FindByUserID(r.Context(), userID)
         if err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusInternalServerError, "자산 목록 조회 실패")
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 목록 조회 실패")
                 return
         }</span>
 
@@ -418,25 +455,31 @@ func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) <span class
 func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         var req CreateAssetRequest
         if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "잘못된 요청 형식")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "잘못된 요청 형식")
                 return
         }</span>
 
-        <span class="cov0" title="0">asset := asset.NewAsset(req.UserID, asset.Type(req.Type), req.Name, req.Amount, req.Currency)
-        if err := h.assetRepo.Save(r.Context(), asset); err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusInternalServerError, "자산 생성 실패")
+        <span class="cov0" title="0">newAsset, err := asset.NewAsset(req.UserID, asset.Type(req.Type), req.Name, req.Amount, req.Currency)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrValidation, err.Error())
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.assetRepo.Save(r.Context(), newAsset); err != nil </span><span
+                                class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 생성 실패")
                 return
         }</span>
 
         <span class="cov0" title="0">response := AssetResponse{
-                ID:        asset.ID,
-                UserID:    asset.UserID,
-                Type:      string(asset.Type),
-                Name:      asset.Name,
-                Amount:    asset.Amount.Amount,
-                Currency:  asset.Amount.Currency,
-                CreatedAt: asset.CreatedAt,
-                UpdatedAt: asset.UpdatedAt,
+                ID:        newAsset.ID,
+                UserID:    newAsset.UserID,
+                Type:      string(newAsset.Type),
+                Name:      newAsset.Name,
+                Amount:    newAsset.Amount.Amount,
+                Currency:  newAsset.Amount.Currency,
+                CreatedAt: newAsset.CreatedAt,
+                UpdatedAt: newAsset.UpdatedAt,
         }
 
         respondJSON(w, http.StatusCreated, response)</span>
@@ -445,13 +488,13 @@ func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) <span clas
 func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         id := chi.URLParam(r, "id")
         if id == "" </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "자산 ID가 필요합니다")
                 return
         }</span>
 
         <span class="cov0" title="0">asset, err := h.assetRepo.FindByID(r.Context(), id)
         if err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusNotFound, "자산을 찾을 수 없습니다")
+                respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
                 return
         }</span>
 
@@ -472,19 +515,19 @@ func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) <span class="
 func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         id := chi.URLParam(r, "id")
         if id == "" </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "자산 ID가 필요합니다")
                 return
         }</span>
 
         <span class="cov0" title="0">var req UpdateAssetRequest
         if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "잘못된 요청 형식")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "잘못된 요청 형식")
                 return
         }</span>
 
         <span class="cov0" title="0">asset, err := h.assetRepo.FindByID(r.Context(), id)
         if err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusNotFound, "자산을 찾을 수 없습니다")
+                respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
                 return
         }</span>
 
@@ -500,7 +543,7 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) <span clas
         <span class="cov0" title="0">asset.UpdatedAt = time.Now()
 
         if err := h.assetRepo.Update(r.Context(), asset); err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusInternalServerError, "자산 업데이트 실패")
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 업데이트 실패")
                 return
         }</span>
 
@@ -521,13 +564,13 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) <span clas
 func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         id := chi.URLParam(r, "id")
         if id == "" </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "자산 ID가 필요합니다")
                 return
         }</span>
 
         <span class="cov0" title="0">if err := h.assetRepo.Delete(r.Context(), id); err != nil </span><span class="cov0"
                                                                                                             title="0">{
-                respondError(w, http.StatusInternalServerError, "자산 삭제 실패")
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 삭제 실패")
                 return
         }</span>
 
@@ -559,13 +602,13 @@ type TransactionResponse struct {
 func (h *Handler) ListTransactions(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         assetID := r.URL.Query().Get("assetId")
         if assetID == "" </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "자산 ID가 필요합니다")
                 return
         }</span>
 
         <span class="cov0" title="0">transactions, err := h.transactionRepo.FindByAssetID(r.Context(), assetID)
         if err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusInternalServerError, "거래 내역 조회 실패")
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "거래 내역 조회 실패")
                 return
         }</span>
 
@@ -590,20 +633,24 @@ func (h *Handler) ListTransactions(w http.ResponseWriter, r *http.Request) <span
 func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         var req CreateTransactionRequest
         if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "잘못된 요청 형식")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "잘못된 요청 형식")
                 return
         }</span>
 
         // 자산 존재 여부 확인
         <span class="cov0" title="0">targetAsset, err := h.assetRepo.FindByID(r.Context(), req.AssetID)
         if err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusNotFound, "자산을 찾을 수 없습니다")
+                respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
                 return
         }</span>
 
         // 거래 생성
-        <span class="cov0" title="0">money := asset.NewMoney(req.Amount, req.Currency)
-        tx, err := asset.NewTransaction(
+        <span class="cov0" title="0">money, err := asset.NewMoney(req.Amount, req.Currency)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrValidation, err.Error())
+                return
+        }</span>
+        <span class="cov0" title="0">tx, err := asset.NewTransaction(
                 req.AssetID,
                 asset.TransactionType(req.Type),
                 money,
@@ -611,28 +658,28 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) <spa
                 req.Description,
         )
         if err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, err.Error())
+                respondError(w, http.StatusBadRequest, ErrValidation, err.Error())
                 return
         }</span>
 
         // 거래 유효성 검증
         <span class="cov0" title="0">if err := targetAsset.ValidateTransaction(tx); err != nil </span><span class="cov0"
                                                                                                             title="0">{
-                respondError(w, http.StatusBadRequest, err.Error())
+                respondError(w, http.StatusBadRequest, ErrValidation, err.Error())
                 return
         }</span>
 
         // 거래 처리 및 자산 업데이트
         <span class="cov0" title="0">if err := targetAsset.ProcessTransaction(tx); err != nil </span><span class="cov0"
                                                                                                            title="0">{
-                respondError(w, http.StatusBadRequest, err.Error())
+                respondError(w, http.StatusBadRequest, ErrValidation, err.Error())
                 return
         }</span>
 
         // 트랜잭션 저장
         <span class="cov0" title="0">if err := h.transactionRepo.Save(r.Context(), tx); err != nil </span><span
                                 class="cov0" title="0">{
-                respondError(w, http.StatusInternalServerError, "거래 생성 실패")
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "거래 생성 실패")
                 return
         }</span>
 
@@ -640,7 +687,7 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) <spa
         <span class="cov0" title="0">if err := h.assetRepo.Update(r.Context(), targetAsset); err != nil </span><span
                                 class="cov0" title="0">{
                 // 롤백 처리가 필요할 수 있음
-                respondError(w, http.StatusInternalServerError, "자산 상태 업데이트 실패")
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 상태 업데이트 실패")
                 return
         }</span>
 
@@ -662,13 +709,13 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) <spa
 func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
         id := chi.URLParam(r, "id")
         if id == "" </span><span class="cov0" title="0">{
-                respondError(w, http.StatusBadRequest, "거래 ID가 필요합니다")
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "거래 ID가 필요합니다")
                 return
         }</span>
 
         <span class="cov0" title="0">tx, err := h.transactionRepo.FindByID(r.Context(), id)
         if err != nil </span><span class="cov0" title="0">{
-                respondError(w, http.StatusNotFound, "거래를 찾을 수 없습니다")
+                respondError(w, http.StatusNotFound, ErrNotFound, "거래를 찾을 수 없습니다")
                 return
         }</span>
 
@@ -687,35 +734,70 @@ func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) <span c
         respondJSON(w, http.StatusOK, response)</span>
 }
 
+// GetPortfolio godoc
+// @Summary 포트폴리오를 조회합니다
+// @Description 사용자의 포트폴리오 정보를 반환합니다
+// @Tags portfolios
+// @Accept json
+// @Produce json
+// @Param userId query string true "사용자 ID"
+// @Success 200 {object} PortfolioResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /portfolios [get]
 func (h *Handler) GetPortfolio(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
-        // TODO: 구현
-        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+        respondError(w, http.StatusNotImplemented, ErrNotImplemented, "이 기능은 아직 구현되지 않았습니다")
 }</span>
 
 func (h *Handler) UpdatePortfolio(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
-        // TODO: 구현
-        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+        respondError(w, http.StatusNotImplemented, ErrNotImplemented, "이 기능은 아직 구현되지 않았습니다")
 }</span>
 
+// GetProfile godoc
+// @Summary 사용자 프로필을 조회합니다
+// @Description 사용자의 게임화 프로필 정보를 반환합니다
+// @Tags gamification
+// @Accept json
+// @Produce json
+// @Param userId query string true "사용자 ID"
+// @Success 200 {object} ProfileResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /gamification/profile [get]
 func (h *Handler) GetProfile(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
-        // TODO: 구현
-        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+        respondError(w, http.StatusNotImplemented, ErrNotImplemented, "이 기능은 아직 구현되지 않았습니다")
 }</span>
 
 func (h *Handler) ListBadges(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
-        // TODO: 구현
-        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+        respondError(w, http.StatusNotImplemented, ErrNotImplemented, "이 기능은 아직 구현되지 않았습니다")
 }</span>
 
 func (h *Handler) ListStreaks(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
-        // TODO: 구현
-        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+        respondError(w, http.StatusNotImplemented, ErrNotImplemented, "이 기능은 아직 구현되지 않았습니다")
 }</span>
 
 func (h *Handler) GetStats(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
-        // TODO: 구현
-        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+        respondError(w, http.StatusNotImplemented, ErrNotImplemented, "이 기능은 아직 구현되지 않았습니다")
 }</span>
+
+// UpdateAssetAmount 자산의 금액을 업데이트합니다.
+func (h *Handler) UpdateAssetAmount(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        var req UpdateAssetAmountRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "잘못된 요청 형식")
+                return
+        }</span>
+
+        <span class="cov0" title="0">money := asset.NewTestMoney(req.Amount, req.Currency)
+
+        id := chi.URLParam(r, "id")
+        if err := h.assetRepo.UpdateAmount(r.Context(), id, money); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 금액 업데이트 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">respondJSON(w, http.StatusOK, nil)</span>
+}
 </pre>
 
                 <pre class="file" id="file2" style="display: none">package config
@@ -998,15 +1080,18 @@ func (r *MemoryRepository[T]) WithTransaction(ctx context.Context, fn func(ctx c
         return fn(ctx)
 }</span>
 
-// MemoryAssetRepository Asset 도메인의 인메모리 저장소
+// MemoryAssetRepository Asset 도메인의 인메모리 저장소 구현체입니다.
 type MemoryAssetRepository struct {
-        repo *MemoryRepository[*Asset]
+        repo         *MemoryRepository[*Asset]
+        transactions map[string]*Transaction
+        mutex        sync.RWMutex
 }
 
-// NewMemoryAssetRepository 새로운 Asset 인메모리 저장소를 생성합니다.
+// NewMemoryAssetRepository 새로운 MemoryAssetRepository를 생성합니다.
 func NewMemoryAssetRepository() *MemoryAssetRepository <span class="cov8" title="1">{
         return &amp;MemoryAssetRepository{
-                repo: NewMemoryRepository[*Asset](),
+                repo:         NewMemoryRepository[*Asset](),
+                transactions: make(map[string]*Transaction),
         }
 }</span>
 
@@ -1033,8 +1118,8 @@ func (r *MemoryAssetRepository) Delete(ctx context.Context, id string) error <sp
 // FindByUserID 사용자 ID로 Asset 목록을 조회합니다.
 func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) <span class="cov8"
                                                                                                        title="1">{
-        r.repo.mutex.RLock()
-        defer r.repo.mutex.RUnlock()
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
 
         var result []*Asset
         for _, asset := range r.repo.data </span><span class="cov8" title="1">{
@@ -1048,8 +1133,8 @@ func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) (
 // FindByType Asset 유형으로 Asset 목록을 조회합니다.
 func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([]*Asset, error) <span class="cov8"
                                                                                                       title="1">{
-        r.repo.mutex.RLock()
-        defer r.repo.mutex.RUnlock()
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
 
         var result []*Asset
         for _, asset := range r.repo.data </span><span class="cov8" title="1">{
@@ -1060,18 +1145,18 @@ func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType Type) ([
         <span class="cov8" title="1">return result, nil</span>
 }
 
-// UpdateAmount Asset의 금액을 업데이트합니다.
-func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amount float64) error <span class="cov8"
-                                                                                                       title="1">{
-        r.repo.mutex.Lock()
-        defer r.repo.mutex.Unlock()
+// UpdateAmount 자산의 금액을 업데이트합니다.
+func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amount Money) error <span class="cov8"
+                                                                                                     title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
 
-        asset, ok := r.repo.data[id]
-        if !ok </span><span class="cov0" title="0">{
+        asset, exists := r.repo.data[id]
+        if !exists </span><span class="cov0" title="0">{
                 return domain.NewRepositoryError("UpdateAmount", fmt.Errorf("asset with ID %s not found", id))
         }</span>
 
-        <span class="cov8" title="1">asset.Amount = Money{Amount: amount, Currency: asset.Amount.Currency}
+        <span class="cov8" title="1">asset.Amount = amount
         asset.UpdatedAt = time.Now()
         r.repo.data[id] = asset
 
@@ -1081,8 +1166,8 @@ func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amoun
 // FindAll 검색 조건에 맞는 모든 Asset을 조회합니다.
 func (r *MemoryAssetRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Asset, error) <span class="cov0"
                                                                                                             title="0">{
-        r.repo.mutex.RLock()
-        defer r.repo.mutex.RUnlock()
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
 
         var result []*Asset
         for _, asset := range r.repo.data </span><span class="cov0" title="0">{
@@ -1103,26 +1188,92 @@ func (r *MemoryAssetRepository) WithTransaction(ctx context.Context, fn func(ctx
         return r.repo.WithTransaction(ctx, fn)
 }</span>
 
+// SaveTransaction 거래를 저장합니다.
+func (r *MemoryAssetRepository) SaveTransaction(_ context.Context, tx *Transaction) error <span class="cov8" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        r.transactions[tx.ID] = tx
+        return nil
+}</span>
+
+// FindTransactionByID ID로 거래를 찾습니다.
+func (r *MemoryAssetRepository) FindTransactionByID(_ context.Context, id string) (*Transaction, error) <span
+                                class="cov8" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        tx, exists := r.transactions[id]
+        if !exists </span><span class="cov0" title="0">{
+                return nil, domain.NewRepositoryError("FindTransactionByID", fmt.Errorf("transaction with ID %s not found", id))
+        }</span>
+        <span class="cov8" title="1">return tx, nil</span>
+}
+
+// FindTransactionsByDateRange 날짜 범위로 거래를 찾습니다.
+func (r *MemoryAssetRepository) FindTransactionsByDateRange(_ context.Context, start, end time.Time) ([]*Transaction, error) <span
+                                class="cov8" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var result []*Transaction
+        for _, tx := range r.transactions </span><span class="cov8" title="1">{
+                if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp; (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span
+                                class="cov8" title="1">{
+                        result = append(result, tx)
+                }</span>
+        }
+        <span class="cov8" title="1">return result, nil</span>
+}
+
+// CalculateTotalAmount 특정 통화의 총 금액을 계산합니다.
+func (r *MemoryAssetRepository) CalculateTotalAmount(_ context.Context, currency string) (Money, error) <span
+                                class="cov8" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        total := NewTestMoney(0, currency)
+        for _, tx := range r.transactions </span><span class="cov8" title="1">{
+                if tx.Amount.Currency == currency </span><span class="cov8" title="1">{
+                        switch tx.Type </span>{
+                        case Income:<span class="cov8" title="1">
+                                result, err := total.Add(tx.Amount)
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return Money{}, err
+                                }</span>
+                                <span class="cov8" title="1">total = result</span>
+                        case Expense:<span class="cov0" title="0">
+                                result, err := total.Subtract(tx.Amount)
+                                if err != nil </span><span class="cov0" title="0">{
+                                        return Money{}, err
+                                }</span>
+                                <span class="cov0" title="0">total = result</span>
+                        }
+                }
+        }
+        <span class="cov8" title="1">return total, nil</span>
+}
+
 // MemoryTransactionRepository Transaction 도메인의 인메모리 저장소 구현체입니다.
 type MemoryTransactionRepository struct {
         repo *MemoryRepository[*Transaction]
 }
 
 // NewMemoryTransactionRepository 새로운 인메모리 Transaction 저장소를 생성합니다.
-func NewMemoryTransactionRepository() *MemoryTransactionRepository <span class="cov8" title="1">{
+func NewMemoryTransactionRepository() *MemoryTransactionRepository <span class="cov0" title="0">{
         return &amp;MemoryTransactionRepository{
                 repo: NewMemoryRepository[*Transaction](),
         }
 }</span>
 
 // Save Transaction을 저장합니다.
-func (r *MemoryTransactionRepository) Save(ctx context.Context, tx *Transaction) error <span class="cov8" title="1">{
+func (r *MemoryTransactionRepository) Save(ctx context.Context, tx *Transaction) error <span class="cov0" title="0">{
         return r.repo.Save(ctx, tx)
 }</span>
 
 // FindByID ID로 Transaction을 조회합니다.
-func (r *MemoryTransactionRepository) FindByID(ctx context.Context, id string) (*Transaction, error) <span class="cov8"
-                                                                                                           title="1">{
+func (r *MemoryTransactionRepository) FindByID(ctx context.Context, id string) (*Transaction, error) <span class="cov0"
+                                                                                                           title="0">{
         return r.repo.FindByID(ctx, id)
 }</span>
 
@@ -1153,46 +1304,46 @@ func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID s
 
 // FindByDateRange 날짜 범위로 Transaction 목록을 조회합니다.
 func (r *MemoryTransactionRepository) FindByDateRange(_ context.Context, start, end time.Time) ([]*Transaction, error) <span
-                                class="cov8" title="1">{
+                                class="cov0" title="0">{
         r.repo.mutex.RLock()
         defer r.repo.mutex.RUnlock()
 
         var result []*Transaction
-        for _, tx := range r.repo.data </span><span class="cov8" title="1">{
+        for _, tx := range r.repo.data </span><span class="cov0" title="0">{
                 if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp;
-                        (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span class="cov8" title="1">{
+                        (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span class="cov0" title="0">{
                         result = append(result, tx)
                 }</span>
         }
-        <span class="cov8" title="1">return result, nil</span>
+        <span class="cov0" title="0">return result, nil</span>
 }
 
 // GetTotalAmount 특정 기간 동안의 총 거래 금액을 계산합니다.
 func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (Money, error) <span
-                                class="cov8" title="1">{
+                                class="cov0" title="0">{
         r.repo.mutex.RLock()
         defer r.repo.mutex.RUnlock()
 
         total := Money{Amount: 0, Currency: "KRW"}
-        for _, tx := range r.repo.data </span><span class="cov8" title="1">{
-                if tx.AssetID == assetID </span><span class="cov8" title="1">{
+        for _, tx := range r.repo.data </span><span class="cov0" title="0">{
+                if tx.AssetID == assetID </span><span class="cov0" title="0">{
                         switch tx.Type </span>{
-                        case Income:<span class="cov8" title="1">
+                        case Income:<span class="cov0" title="0">
                                 result, err := total.Add(tx.Amount)
                                 if err != nil </span><span class="cov0" title="0">{
                                         return Money{}, err
                                 }</span>
-                                <span class="cov8" title="1">total = result</span>
-                        case Expense:<span class="cov8" title="1">
+                                <span class="cov0" title="0">total = result</span>
+                        case Expense:<span class="cov0" title="0">
                                 result, err := total.Subtract(tx.Amount)
                                 if err != nil </span><span class="cov0" title="0">{
                                         return Money{}, err
                                 }</span>
-                                <span class="cov8" title="1">total = result</span>
+                                <span class="cov0" title="0">total = result</span>
                         }
                 }
         }
-        <span class="cov8" title="1">return total, nil</span>
+        <span class="cov0" title="0">return total, nil</span>
 }
 
 // FindAll 검색 조건에 맞는 모든 Transaction을 조회합니다.
@@ -1329,42 +1480,54 @@ type Money struct {
 }
 
 // NewMoney Money 값 객체를 생성합니다.
-func NewMoney(amount float64, currency string) Money <span class="cov8" title="1">{
-        return Money{
+func NewMoney(amount float64, currency string) (Money, error) <span class="cov8" title="1">{
+        if amount &lt; 0 </span><span class="cov8" title="1">{
+                return Money{}, fmt.Errorf("금액은 음수가 될 수 없습니다: %f", amount)
+        }</span>
+        <span class="cov8" title="1">if currency == "" </span><span class="cov8" title="1">{
+                return Money{}, fmt.Errorf("통화는 비어있을 수 없습니다")
+        }</span>
+        <span class="cov8" title="1">return Money{
                 Amount:   amount,
                 Currency: currency,
-        }
-}</span>
+        }, nil</span>
+}
 
 // Add 두 Money 값을 더합니다.
 func (m Money) Add(other Money) (Money, error) <span class="cov8" title="1">{
-        if m.Currency != other.Currency </span><span class="cov0" title="0">{
+        if m.Currency != other.Currency </span><span class="cov8" title="1">{
                 return Money{}, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
         }</span>
-        <span class="cov8" title="1">return Money{
-                Amount:   m.Amount + other.Amount,
-                Currency: m.Currency,
-        }, nil</span>
+        <span class="cov8" title="1">return NewMoney(m.Amount+other.Amount, m.Currency)</span>
 }
 
 // Subtract 두 Money 값을 뺍니다.
 func (m Money) Subtract(other Money) (Money, error) <span class="cov8" title="1">{
-        if m.Currency != other.Currency </span><span class="cov0" title="0">{
+        if m.Currency != other.Currency </span><span class="cov8" title="1">{
                 return Money{}, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
         }</span>
-        <span class="cov8" title="1">return Money{
-                Amount:   m.Amount - other.Amount,
-                Currency: m.Currency,
-        }, nil</span>
+        <span class="cov8" title="1">result := m.Amount - other.Amount
+        return NewMoney(result, m.Currency)</span>
 }
 
 // Multiply Money 값을 주어진 배수로 곱합니다.
-func (m Money) Multiply(multiplier float64) Money <span class="cov0" title="0">{
-        return Money{
-                Amount:   m.Amount * multiplier,
-                Currency: m.Currency,
-        }
-}</span>
+func (m Money) Multiply(multiplier float64) (Money, error) <span class="cov8" title="1">{
+        if multiplier &lt; 0 </span><span class="cov8" title="1">{
+                return Money{}, fmt.Errorf("음수 배수는 사용할 수 없습니다: %f", multiplier)
+        }</span>
+        <span class="cov8" title="1">return NewMoney(m.Amount*multiplier, m.Currency)</span>
+}
+
+// Divide Money 값을 주어진 제수로 나눕니다.
+func (m Money) Divide(divisor float64) (Money, error) <span class="cov8" title="1">{
+        if divisor == 0 </span><span class="cov8" title="1">{
+                return Money{}, fmt.Errorf("0으로 나눌 수 없습니다")
+        }</span>
+        <span class="cov8" title="1">if divisor &lt; 0 </span><span class="cov8" title="1">{
+                return Money{}, fmt.Errorf("음수로 나눌 수 없습니다: %f", divisor)
+        }</span>
+        <span class="cov8" title="1">return NewMoney(m.Amount/divisor, m.Currency)</span>
+}
 
 // IsZero Money 값이 0인지 확인합니다.
 func (m Money) IsZero() bool <span class="cov8" title="1">{
@@ -1374,6 +1537,37 @@ func (m Money) IsZero() bool <span class="cov8" title="1">{
 // IsNegative Money 값이 음수인지 확인합니다.
 func (m Money) IsNegative() bool <span class="cov8" title="1">{
         return m.Amount &lt; 0
+}</span>
+
+// IsPositive Money 값이 양수인지 확인합니다.
+func (m Money) IsPositive() bool <span class="cov8" title="1">{
+        return m.Amount &gt; 0
+}</span>
+
+// Equals 두 Money 값이 같은지 확인합니다.
+func (m Money) Equals(other Money) bool <span class="cov8" title="1">{
+        return m.Amount == other.Amount &amp;&amp; m.Currency == other.Currency
+}</span>
+
+// GreaterThan 현재 Money 값이 다른 Money 값보다 큰지 확인합니다.
+func (m Money) GreaterThan(other Money) (bool, error) <span class="cov8" title="1">{
+        if m.Currency != other.Currency </span><span class="cov8" title="1">{
+                return false, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
+        }</span>
+        <span class="cov8" title="1">return m.Amount &gt; other.Amount, nil</span>
+}
+
+// LessThan 현재 Money 값이 다른 Money 값보다 작은지 확인합니다.
+func (m Money) LessThan(other Money) (bool, error) <span class="cov8" title="1">{
+        if m.Currency != other.Currency </span><span class="cov8" title="1">{
+                return false, fmt.Errorf("통화가 일치하지 않습니다: %s != %s", m.Currency, other.Currency)
+        }</span>
+        <span class="cov8" title="1">return m.Amount &lt; other.Amount, nil</span>
+}
+
+// String Money 값을 문자열로 변환합니다.
+func (m Money) String() string <span class="cov8" title="1">{
+        return fmt.Sprintf("%.2f %s", m.Amount, m.Currency)
 }</span>
 
 // Performance 자산의 성과를 나타냅니다.
@@ -1552,35 +1746,31 @@ const (
 )
 
 // NewAsset 새로운 자산을 생성합니다.
-func NewAsset(userID string, assetType Type, name string, amount float64, currency string) *Asset <span class="cov8"
-                                                                                                        title="1">{
-        now := time.Now()
+func NewAsset(userID string, assetType Type, name string, amount float64, currency string) (*Asset, error) <span
+                                class="cov8" title="1">{
+        money, err := NewMoney(amount, currency)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("자산 생성 실패: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">now := time.Now()
         return &amp;Asset{
                 ID:     generateID(),
                 UserID: userID,
                 Type:   assetType,
                 Name:   name,
-                Amount: Money{
-                        Amount:   amount,
-                        Currency: currency,
-                },
+                Amount: money,
                 Performance: Performance{
-                        StartValue: Money{
-                                Amount:   amount,
-                                Currency: currency,
-                        },
-                        CurrentValue: Money{
-                                Amount:   amount,
-                                Currency: currency,
-                        },
+                        StartValue:     money,
+                        CurrentValue:   money,
                         LastUpdateTime: now,
                 },
                 Goals:        make([]Goal, 0),
                 Achievements: make([]Achievement, 0),
                 CreatedAt:    now,
                 UpdatedAt:    now,
-        }
-}</span>
+        }, nil</span>
+}
 
 // AddGoal 자산에 새로운 목표를 추가합니다.
 func (a *Asset) AddGoal(goalType GoalType, target Money, deadline time.Time) *Goal <span class="cov0" title="0">{
@@ -1926,141 +2116,39 @@ import (
 
 // TestFixture 테스트에 사용할 데이터 세트
 type TestFixture struct {
-        Assets       []*Asset
-        Transactions []*Transaction
-        Portfolios   []*Portfolio
+        assets       map[string]*Asset
+        transactions map[string]*Transaction
+        portfolios   map[string]*Portfolio
 }
 
 // NewTestFixture 새로운 테스트 픽스처를 생성합니다.
 func NewTestFixture() *TestFixture <span class="cov8" title="1">{
-        assets := []*Asset{
-                {
-                        ID:        "asset-1",
-                        UserID:    "test-user-1",
-                        Type:      Cash,
-                        Name:      "현금 자산",
-                        Amount:    Money{Amount: 1000000.0, Currency: "KRW"},
-                        CreatedAt: time.Now(),
-                        UpdatedAt: time.Now(),
-                },
-                {
-                        ID:        "asset-2",
-                        UserID:    "test-user-1",
-                        Type:      Stock,
-                        Name:      "주식 자산",
-                        Amount:    Money{Amount: 2000000.0, Currency: "KRW"},
-                        CreatedAt: time.Now(),
-                        UpdatedAt: time.Now(),
-                },
-                {
-                        ID:        "asset-3",
-                        UserID:    "test-user-1",
-                        Type:      RealEstate,
-                        Name:      "부동산 자산",
-                        Amount:    Money{Amount: 300000000.0, Currency: "KRW"},
-                        CreatedAt: time.Now(),
-                        UpdatedAt: time.Now(),
-                },
-        }
-
-        transactions := []*Transaction{
-                {
-                        ID:          "tx-1",
-                        AssetID:     assets[0].ID,
-                        Type:        Income,
-                        Amount:      Money{Amount: 500000.0, Currency: "KRW"},
-                        Category:    "급여",
-                        Description: "3월 급여",
-                        Date:        time.Now(),
-                        CreatedAt:   time.Now(),
-                },
-                {
-                        ID:          "tx-2",
-                        AssetID:     assets[0].ID,
-                        Type:        Expense,
-                        Amount:      Money{Amount: 100000.0, Currency: "KRW"},
-                        Category:    "식비",
-                        Description: "3월 식비",
-                        Date:        time.Now(),
-                        CreatedAt:   time.Now(),
-                },
-                {
-                        ID:          "tx-3",
-                        AssetID:     assets[0].ID,
-                        Type:        Transfer,
-                        Amount:      Money{Amount: 1000000.0, Currency: "KRW"},
-                        Category:    "이체",
-                        Description: "주식 계좌로 이체",
-                        Date:        time.Now(),
-                        CreatedAt:   time.Now(),
-                },
-        }
-
-        // 포트폴리오 데이터 생성
-        portfolios := []*Portfolio{
-                {
-                        ID:     "portfolio-1",
-                        UserID: "test-user-1",
-                        Assets: []PortfolioAsset{
-                                {
-                                        AssetID: "asset-1",
-                                        Weight:  0.2, // 20%
-                                },
-                                {
-                                        AssetID: "asset-2",
-                                        Weight:  0.5, // 50%
-                                },
-                                {
-                                        AssetID: "asset-3",
-                                        Weight:  0.3, // 30%
-                                },
-                        },
-                        CreatedAt: time.Now(),
-                        UpdatedAt: time.Now(),
-                },
-        }
-
         return &amp;TestFixture{
-                Assets:       assets,
-                Transactions: transactions,
-                Portfolios:   portfolios,
+                assets:       make(map[string]*Asset),
+                transactions: make(map[string]*Transaction),
+                portfolios:   make(map[string]*Portfolio),
         }
 }</span>
 
 // GetAssetByID 테스트 픽스처에서 ID로 Asset을 찾습니다.
 func (f *TestFixture) GetAssetByID(id string) *Asset <span class="cov8" title="1">{
-        for _, asset := range f.Assets </span><span class="cov8" title="1">{
-                if asset.ID == id </span><span class="cov8" title="1">{
-                        return asset
-                }</span>
-        }
-        <span class="cov8" title="1">return nil</span>
-}
+        return f.assets[id]
+}</span>
 
 // GetTransactionByID 테스트 픽스처에서 ID로 Transaction을 찾습니다.
 func (f *TestFixture) GetTransactionByID(id string) *Transaction <span class="cov8" title="1">{
-        for _, tx := range f.Transactions </span><span class="cov8" title="1">{
-                if tx.ID == id </span><span class="cov8" title="1">{
-                        return tx
-                }</span>
-        }
-        <span class="cov8" title="1">return nil</span>
-}
+        return f.transactions[id]
+}</span>
 
 // GetPortfolioByID 테스트 픽스처에서 ID로 Portfolio를 찾습니다.
 func (f *TestFixture) GetPortfolioByID(id string) *Portfolio <span class="cov8" title="1">{
-        for _, portfolio := range f.Portfolios </span><span class="cov8" title="1">{
-                if portfolio.ID == id </span><span class="cov8" title="1">{
-                        return portfolio
-                }</span>
-        }
-        <span class="cov8" title="1">return nil</span>
-}
+        return f.portfolios[id]
+}</span>
 
 // GetAssetsByUserID 테스트 픽스처에서 UserID로 Asset 목록을 찾습니다.
 func (f *TestFixture) GetAssetsByUserID(userID string) []*Asset <span class="cov8" title="1">{
         var result []*Asset
-        for _, asset := range f.Assets </span><span class="cov8" title="1">{
+        for _, asset := range f.assets </span><span class="cov8" title="1">{
                 if asset.UserID == userID </span><span class="cov8" title="1">{
                         result = append(result, asset)
                 }</span>
@@ -2071,7 +2159,7 @@ func (f *TestFixture) GetAssetsByUserID(userID string) []*Asset <span class="cov
 // GetTransactionsByAssetID 테스트 픽스처에서 AssetID로 Transaction 목록을 찾습니다.
 func (f *TestFixture) GetTransactionsByAssetID(assetID string) []*Transaction <span class="cov8" title="1">{
         var result []*Transaction
-        for _, tx := range f.Transactions </span><span class="cov8" title="1">{
+        for _, tx := range f.transactions </span><span class="cov8" title="1">{
                 if tx.AssetID == assetID </span><span class="cov8" title="1">{
                         result = append(result, tx)
                 }</span>
@@ -2081,7 +2169,7 @@ func (f *TestFixture) GetTransactionsByAssetID(assetID string) []*Transaction <s
 
 // GetPortfolioByUserID 테스트 픽스처에서 UserID로 Portfolio를 찾습니다.
 func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class="cov8" title="1">{
-        for _, portfolio := range f.Portfolios </span><span class="cov8" title="1">{
+        for _, portfolio := range f.portfolios </span><span class="cov8" title="1">{
                 if portfolio.UserID == userID </span><span class="cov8" title="1">{
                         return portfolio
                 }</span>
@@ -2091,23 +2179,26 @@ func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class
 
 // CreateTestAsset 테스트용 자산을 생성합니다.
 func CreateTestAsset() *Asset <span class="cov0" title="0">{
-        return &amp;Asset{
+        money := NewTestMoney(500000, "KRW")
+        asset := &amp;Asset{
                 ID:        "test-asset-1",
                 UserID:    "test-user-1",
                 Type:      Stock,
                 Name:      "삼성전자",
-                Amount:    NewMoney(500000, "KRW"),
+                Amount:    money,
                 CreatedAt: time.Now(),
                 UpdatedAt: time.Now(),
         }
+        return asset
 }</span>
 
 // CreateTestTransaction 테스트용 거래 내역을 생성합니다.
 func CreateTestTransaction() *Transaction <span class="cov0" title="0">{
+        money := NewTestMoney(100000, "KRW")
         tx, _ := NewTransaction(
                 "test-asset-1",
                 Income,
-                NewMoney(100000, "KRW"),
+                money,
                 "급여",
                 "2월 급여",
         )
@@ -2124,6 +2215,94 @@ func CreateTestPortfolio() *Portfolio <span class="cov0" title="0">{
                 UpdatedAt: time.Now(),
         }
 }</span>
+
+// NewTestMoney 테스트용 Money 값을 생성합니다.
+func NewTestMoney(amount float64, currency string) Money <span class="cov8" title="1">{
+        money, err := NewMoney(amount, currency)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">return money</span>
+}
+
+// NewTestAsset 테스트용 자산을 생성합니다.
+func NewTestAsset() *Asset <span class="cov0" title="0">{
+        asset, err := NewAsset("test-user", Cash, "Test Asset", 1000000, "KRW")
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov0" title="0">return asset</span>
+}
+
+// NewTestTransaction 테스트용 거래를 생성합니다.
+func NewTestTransaction() *Transaction <span class="cov8" title="1">{
+        money := NewTestMoney(500000, "KRW")
+        tx, err := NewTransaction("test-asset", Income, money, "Test", "Test Transaction")
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">return tx</span>
+}
+
+// NewTestPortfolio 테스트용 포트폴리오를 생성합니다.
+func NewTestPortfolio() *Portfolio <span class="cov8" title="1">{
+        return NewPortfolio("test-user", []PortfolioAsset{
+                {
+                        AssetID: "test-asset-1",
+                        Weight:  0.6,
+                },
+                {
+                        AssetID: "test-asset-2",
+                        Weight:  0.4,
+                },
+        })
+}</span>
+
+// CreateFixture 테스트 데이터를 생성합니다.
+func CreateFixture() *TestFixture <span class="cov8" title="1">{
+        fixture := NewTestFixture()
+
+        // 자산 생성
+        asset1, err := NewAsset("user-1", Cash, "현금 자산", 1000000, "KRW")
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">asset2, err := NewAsset("user-1", Stock, "주식 자산", 2000000, "KRW")
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">fixture.assets[asset1.ID] = asset1
+        fixture.assets[asset2.ID] = asset2
+
+        // 거래 생성
+        money1 := NewTestMoney(500000, "KRW")
+        tx1, err := NewTransaction(asset1.ID, Income, money1, "급여", "2월 급여")
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">money2 := NewTestMoney(300000, "KRW")
+        tx2, err := NewTransaction(asset1.ID, Expense, money2, "식비", "2월 식비")
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">money3 := NewTestMoney(200000, "KRW")
+        tx3, err := NewTransaction(asset2.ID, Income, money3, "배당금", "2월 배당금")
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">fixture.transactions[tx1.ID] = tx1
+        fixture.transactions[tx2.ID] = tx2
+        fixture.transactions[tx3.ID] = tx3
+
+        // 포트폴리오 생성
+        portfolio := NewPortfolio("user-1", []PortfolioAsset{
+                {AssetID: asset1.ID, Weight: 0.6},
+                {AssetID: asset2.ID, Weight: 0.4},
+        })
+        fixture.portfolios[portfolio.ID] = portfolio
+
+        return fixture</span>
+}
 </pre>
 
                 <pre class="file" id="file8" style="display: none">package domain
