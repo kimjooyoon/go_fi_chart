@@ -146,6 +146,8 @@ make security
 - [이벤트 스토밍](docs/event-storming/README.md)
 - [작업 현황](docs/DONE.md)
 - [향후 계획](docs/TODO.md)
+- [문제 해결](docs/PROBLEMS.md)
+- [LLM 역할](docs/LLM_ROLE.md)
 
 ## 기여하기
 
