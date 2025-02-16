@@ -289,12 +289,19 @@ func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.assetRepo.Delete(r.Context(), id); err != nil {
-		respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 삭제 실패")
+	// 자산이 존재하는지 확인
+	_, err := h.assetRepo.FindByID(r.Context(), id)
+	if err != nil {
+		respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
 		return
 	}
 
-	respondJSON(w, http.StatusNoContent, nil)
+	if err := h.assetRepo.Delete(r.Context(), id); err != nil {
+		respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 삭제 중 오류가 발생했습니다")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // 거래 내역 요청/응답 구조체
