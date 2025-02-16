@@ -3,7 +3,7 @@
 <html>
 <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <title>alerts: Go Coverage Report</title>
+        <title>server: Go Coverage Report</title>
         <style>
                 body {
                         background: black;
@@ -97,71 +97,75 @@
         <div id="nav">
                 <select id="files">
 
-                        <option value="file0">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
-                                (89.5%)
-                        </option>
-
-                        <option value="file1">github.com/aske/go_fi_chart/services/monitoring/internal/domain/types.go
+                        <option value="file0">github.com/aske/go_fi_chart/services/monitoring/cmd/server/main.go
                                 (0.0%)
                         </option>
 
-                        <option value="file2">
+                        <option value="file1">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
+                                (89.5%)
+                        </option>
+
+                        <option value="file2">github.com/aske/go_fi_chart/services/monitoring/internal/domain/types.go
+                                (0.0%)
+                        </option>
+
+                        <option value="file3">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/exporters/prometheus/exporter.go
                                 (93.5%)
                         </option>
 
-                        <option value="file3">
+                        <option value="file4">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/github/collector.go (94.7%)
                         </option>
 
-                        <option value="file4">github.com/aske/go_fi_chart/services/monitoring/internal/github/types.go
+                        <option value="file5">github.com/aske/go_fi_chart/services/monitoring/internal/github/types.go
                                 (100.0%)
                         </option>
 
-                        <option value="file5">
+                        <option value="file6">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (100.0%)
                         </option>
 
-                        <option value="file6">
+                        <option value="file7">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/github/collector.go
                                 (84.0%)
                         </option>
 
-                        <option value="file7">
+                        <option value="file8">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/github/model.go
                                 (100.0%)
                         </option>
 
-                        <option value="file8">
+                        <option value="file9">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/simple/metric.go
                                 (100.0%)
                         </option>
 
-                        <option value="file9">github.com/aske/go_fi_chart/services/monitoring/internal/metrics/types.go
+                        <option value="file10">github.com/aske/go_fi_chart/services/monitoring/internal/metrics/types.go
                                 (0.0%)
-                        </option>
-
-                        <option value="file10">
-                                github.com/aske/go_fi_chart/services/monitoring/metrics/collectors/base.go (93.8%)
                         </option>
 
                         <option value="file11">
+                                github.com/aske/go_fi_chart/services/monitoring/metrics/collectors/base.go (93.8%)
+                        </option>
+
+                        <option value="file12">
                                 github.com/aske/go_fi_chart/services/monitoring/metrics/collectors/simple.go (100.0%)
                         </option>
 
-                        <option value="file12">github.com/aske/go_fi_chart/services/monitoring/metrics/domain/metric.go
+                        <option value="file13">github.com/aske/go_fi_chart/services/monitoring/metrics/domain/metric.go
                                 (100.0%)
                         </option>
 
-                        <option value="file13">github.com/aske/go_fi_chart/services/monitoring/metrics/domain/types.go
+                        <option value="file14">github.com/aske/go_fi_chart/services/monitoring/metrics/domain/types.go
                                 (100.0%)
                         </option>
 
-                        <option value="file14">github.com/aske/go_fi_chart/services/monitoring/pkg/domain/types.go
+                        <option value="file15">github.com/aske/go_fi_chart/services/monitoring/pkg/domain/types.go
                                 (0.0%)
                         </option>
 
-                        <option value="file15">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                        <option value="file16">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
                                 (100.0%)
                         </option>
 
@@ -177,7 +181,86 @@
 </div>
 <div id="content">
 		
-		<pre class="file" id="file0" style="display: none">package alerts
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "log"
+        "net/http"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "github.com/go-chi/chi/v5"
+        "github.com/go-chi/chi/v5/middleware"
+        "github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+func main() <span class="cov0" title="0">{
+        // 환경 변수 로드
+        port := os.Getenv("PORT")
+        if port == "" </span><span class="cov0" title="0">{
+                port = "8083" // 다른 서비스와 다른 포트 사용
+        }</span>
+
+        // 라우터 설정
+        <span class="cov0" title="0">r := chi.NewRouter()
+        r.Use(middleware.Logger)
+        r.Use(middleware.Recoverer)
+        r.Use(middleware.Timeout(60 * time.Second))
+
+        // 메트릭 엔드포인트 설정
+        r.Handle("/metrics", promhttp.Handler())
+
+        // 서버 설정
+        server := &amp;http.Server{
+                Addr:              fmt.Sprintf(":%s", port),
+                Handler:           r,
+                ReadHeaderTimeout: 10 * time.Second,
+        }
+
+        // 서버 시작
+        serverCtx, serverStopCtx := context.WithCancel(context.Background())
+
+        sig := make(chan os.Signal, 1)
+        signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+        go func() </span><span class="cov0" title="0">{
+                &lt;-sig
+
+                // Shutdown signal with grace period of 30 seconds
+                shutdownCtx, cancel := context.WithTimeout(serverCtx, 30*time.Second)
+                defer cancel() // context 취소 함수 호출
+
+                go func() </span><span class="cov0" title="0">{
+                        &lt;-shutdownCtx.Done()
+                        if shutdownCtx.Err() == context.DeadlineExceeded </span><span class="cov0" title="0">{
+                                log.Fatal("graceful shutdown timed out.. forcing exit.")
+                        }</span>
+                }()
+
+                // Trigger graceful shutdown
+                <span class="cov0" title="0">err := server.Shutdown(shutdownCtx)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Fatal(err)
+                }</span>
+                <span class="cov0" title="0">serverStopCtx()</span>
+        }()
+
+        // 서버 시작
+        <span class="cov0" title="0">log.Printf("Monitoring 서비스 시작 (포트: %s)\n", port)
+        err := server.ListenAndServe()
+        if err != nil &amp;&amp; err != http.ErrServerClosed </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+
+        // 종료 대기
+        <span class="cov0" title="0">&lt;-serverCtx.Done()</span>
+}
+</pre>
+
+        <pre class="file" id="file1" style="display: none">package alerts
 
 import (
         "context"
@@ -261,7 +344,7 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error <span cl
 }
 </pre>
 
-        <pre class="file" id="file1" style="display: none">package domain
+        <pre class="file" id="file2" style="display: none">package domain
 
 import "time"
 
@@ -300,7 +383,7 @@ type Publisher interface {
 }
 </pre>
 
-        <pre class="file" id="file2" style="display: none">package prometheus
+        <pre class="file" id="file3" style="display: none">package prometheus
 
 import (
         "context"
@@ -408,7 +491,7 @@ func (e *Exporter) getOrCreateCollector(m domain.Metric) (prometheus.Collector, 
 }
 </pre>
 
-        <pre class="file" id="file3" style="display: none">package github
+        <pre class="file" id="file4" style="display: none">package github
 
 import (
         "context"
@@ -471,7 +554,7 @@ func (c *Collector) Metrics() []domain.Metric <span class="cov8" title="1">{
 }</span>
 </pre>
 
-        <pre class="file" id="file4" style="display: none">package github
+        <pre class="file" id="file5" style="display: none">package github
 
 import (
         "time"
@@ -547,7 +630,7 @@ func (m ActionMetric) ToDurationMetric() domain.Metric <span class="cov8" title=
 }</span>
 </pre>
 
-        <pre class="file" id="file5" style="display: none">package metrics
+        <pre class="file" id="file6" style="display: none">package metrics
 
 import (
         "context"
@@ -590,7 +673,7 @@ func NewSimpleCollector(publisher pkgdomain.Publisher) *SimpleCollector <span cl
 }</span>
 </pre>
 
-        <pre class="file" id="file6" style="display: none">package github
+        <pre class="file" id="file7" style="display: none">package github
 
 import (
         "context"
@@ -662,7 +745,7 @@ func (c *Collector) Reset() <span class="cov0" title="0">{
 }</span>
 </pre>
 
-        <pre class="file" id="file7" style="display: none">package github
+        <pre class="file" id="file8" style="display: none">package github
 
 import (
         "time"
@@ -738,7 +821,7 @@ func (m ActionMetric) ToDurationMetric() domain.Metric <span class="cov8" title=
 }</span>
 </pre>
 
-        <pre class="file" id="file8" style="display: none">package simple
+        <pre class="file" id="file9" style="display: none">package simple
 
 import (
         "github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
@@ -794,7 +877,7 @@ func (m *Metric) WithLabels(labels map[string]string) *Metric <span class="cov8"
 }</span>
 </pre>
 
-        <pre class="file" id="file9" style="display: none">package metrics
+        <pre class="file" id="file10" style="display: none">package metrics
 
 import (
         "context"
@@ -876,7 +959,7 @@ type Collector interface {
 }
 </pre>
 
-        <pre class="file" id="file10" style="display: none">package collectors
+        <pre class="file" id="file11" style="display: none">package collectors
 
 import (
         "context"
@@ -933,7 +1016,7 @@ func (c *BaseCollector) Reset() <span class="cov8" title="1">{
 }</span>
 </pre>
 
-        <pre class="file" id="file11" style="display: none">package collectors
+        <pre class="file" id="file12" style="display: none">package collectors
 
 import (
         "github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
@@ -952,7 +1035,7 @@ func NewSimpleCollector(publisher domain.Publisher) *SimpleCollector <span class
 }</span>
 </pre>
 
-        <pre class="file" id="file12" style="display: none">package domain
+        <pre class="file" id="file13" style="display: none">package domain
 
 // BaseMetric 기본 메트릭 구현체입니다.
 type BaseMetric struct {
@@ -994,7 +1077,7 @@ func (m *BaseMetric) Description() string <span class="cov8" title="1">{
 }</span>
 </pre>
 
-        <pre class="file" id="file13" style="display: none">package domain
+        <pre class="file" id="file14" style="display: none">package domain
 
 import (
         "context"
@@ -1102,7 +1185,7 @@ const (
 )
 </pre>
 
-        <pre class="file" id="file14" style="display: none">package domain
+        <pre class="file" id="file15" style="display: none">package domain
 
 import (
         "context"
@@ -1210,7 +1293,7 @@ type Notifier interface {
 }
 </pre>
 
-        <pre class="file" id="file15" style="display: none">package health
+        <pre class="file" id="file16" style="display: none">package health
 
 import (
         "context"
