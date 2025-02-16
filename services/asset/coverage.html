@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>server: Go Coverage Report</title>
+    <style>
+        body {
+            background: black;
+            color: rgb(80, 80, 80);
+        }
+
+        body, pre, #legend span {
+            font-family: Menlo, monospace;
+            font-weight: bold;
+        }
+
+        #topbar {
+            background: black;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 42px;
+            border-bottom: 1px solid rgb(80, 80, 80);
+        }
+
+        #content {
+            margin-top: 50px;
+        }
+
+        #nav, #legend {
+            float: left;
+            margin-left: 10px;
+        }
+
+        #legend {
+            margin-top: 12px;
+        }
+
+        #nav {
+            margin-top: 10px;
+        }
+
+        #legend span {
+            margin: 0 5px;
+        }
+
+        .cov0 {
+            color: rgb(192, 0, 0)
+        }
+
+        .cov1 {
+            color: rgb(128, 128, 128)
+        }
+
+        .cov2 {
+            color: rgb(116, 140, 131)
+        }
+
+        .cov3 {
+            color: rgb(104, 152, 134)
+        }
+
+        .cov4 {
+            color: rgb(92, 164, 137)
+        }
+
+        .cov5 {
+            color: rgb(80, 176, 140)
+        }
+
+        .cov6 {
+            color: rgb(68, 188, 143)
+        }
+
+        .cov7 {
+            color: rgb(56, 200, 146)
+        }
+
+        .cov8 {
+            color: rgb(44, 212, 149)
+        }
+
+        .cov9 {
+            color: rgb(32, 224, 152)
+        }
+
+        .cov10 {
+            color: rgb(20, 236, 155)
+        }
+
+    </style>
+</head>
+<body>
+<div id="topbar">
+    <div id="nav">
+        <select id="files">
+
+            <option value="file0">github.com/aske/go_fi_chart/services/asset/cmd/server/main.go (0.0%)</option>
+
+            <option value="file1">github.com/aske/go_fi_chart/services/asset/internal/api/handler.go (0.0%)</option>
+
+            <option value="file2">github.com/aske/go_fi_chart/services/asset/internal/domain/asset.go (0.0%)</option>
+
+            <option value="file3">github.com/aske/go_fi_chart/services/asset/internal/domain/repository.go (0.0%)
+            </option>
+
+        </select>
+    </div>
+    <div id="legend">
+        <span>not tracked</span>
+
+        <span class="cov0">not covered</span>
+        <span class="cov8">covered</span>
+
+    </div>
+</div>
+<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "log"
+        "net/http"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "github.com/aske/go_fi_chart/services/asset/internal/api"
+        "github.com/go-chi/chi/v5"
+        "github.com/go-chi/chi/v5/middleware"
+)
+
+func main() <span class="cov0" title="0">{
+        // 환경 변수 로드
+        port := os.Getenv("PORT")
+        if port == "" </span><span class="cov0" title="0">{
+                port = "8080"
+        }</span>
+
+        // 라우터 설정
+        <span class="cov0" title="0">r := chi.NewRouter()
+        r.Use(middleware.Logger)
+        r.Use(middleware.Recoverer)
+        r.Use(middleware.Timeout(60 * time.Second))
+
+        // 핸들러 설정
+        handler := api.NewHandler()
+        handler.RegisterRoutes(r)
+
+        // 서버 설정
+        server := &amp;http.Server{
+                Addr:              fmt.Sprintf(":%s", port),
+                Handler:           r,
+                ReadHeaderTimeout: 10 * time.Second,
+        }
+
+        // 서버 시작
+        serverCtx, serverStopCtx := context.WithCancel(context.Background())
+
+        sig := make(chan os.Signal, 1)
+        signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+        go func() </span><span class="cov0" title="0">{
+                &lt;-sig
+
+                // Shutdown signal with grace period of 30 seconds
+                shutdownCtx, _ := context.WithTimeout(serverCtx, 30*time.Second)
+
+                go func() </span><span class="cov0" title="0">{
+                        &lt;-shutdownCtx.Done()
+                        if shutdownCtx.Err() == context.DeadlineExceeded </span><span class="cov0" title="0">{
+                                log.Fatal("graceful shutdown timed out.. forcing exit.")
+                        }</span>
+                }()
+
+                // Trigger graceful shutdown
+                <span class="cov0" title="0">err := server.Shutdown(shutdownCtx)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Fatal(err)
+                }</span>
+                <span class="cov0" title="0">serverStopCtx()</span>
+        }()
+
+        // 서버 시작
+        <span class="cov0" title="0">log.Printf("Asset 서비스 시작 (포트: %s)\n", port)
+        err := server.ListenAndServe()
+        if err != nil &amp;&amp; err != http.ErrServerClosed </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+
+        // 종료 대기
+        <span class="cov0" title="0">&lt;-serverCtx.Done()</span>
+}
+</pre>
+
+    <pre class="file" id="file1" style="display: none">package api
+
+import (
+        "encoding/json"
+        "net/http"
+        "time"
+
+        "github.com/aske/go_fi_chart/pkg/domain/valueobjects"
+        "github.com/aske/go_fi_chart/services/asset/internal/domain"
+        "github.com/go-chi/chi/v5"
+)
+
+// Handler API 핸들러입니다.
+type Handler struct {
+        assetRepo domain.AssetRepository
+}
+
+// NewHandler 새로운 API 핸들러를 생성합니다.
+func NewHandler() *Handler <span class="cov0" title="0">{
+        return &amp;Handler{
+                assetRepo: domain.NewMemoryAssetRepository(),
+        }
+}</span>
+
+// RegisterRoutes 라우터에 API 핸들러를 등록합니다.
+func (h *Handler) RegisterRoutes(r chi.Router) <span class="cov0" title="0">{
+        r.Route("/api/v1/assets", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Get("/", h.ListAssets)
+                r.Post("/", h.CreateAsset)
+                r.Get("/{id}", h.GetAsset)
+                r.Put("/{id}", h.UpdateAsset)
+                r.Delete("/{id}", h.DeleteAsset)
+        }</span>)
+}
+
+// AssetResponse 자산 응답 구조체
+type AssetResponse struct {
+        ID        string    `json:"id"`
+        UserID    string    `json:"userId"`
+        Type      string    `json:"type"`
+        Name      string    `json:"name"`
+        Amount    float64   `json:"amount"`
+        Currency  string    `json:"currency"`
+        CreatedAt time.Time `json:"createdAt"`
+        UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// CreateAssetRequest 자산 생성 요청 구조체
+type CreateAssetRequest struct {
+        UserID   string  `json:"userId"`
+        Type     string  `json:"type"`
+        Name     string  `json:"name"`
+        Amount   float64 `json:"amount"`
+        Currency string  `json:"currency"`
+}
+
+// ErrorResponse 에러 응답 구조체
+type ErrorResponse struct {
+        Code    string `json:"code"`
+        Message string `json:"message"`
+}
+
+// API 에러 코드 상수
+const (
+        ErrInvalidRequest = "INVALID_REQUEST"
+        ErrNotFound       = "NOT_FOUND"
+        ErrInternalServer = "INTERNAL_SERVER_ERROR"
+)
+
+func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        userID := r.URL.Query().Get("userId")
+        if userID == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "사용자 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">assets, err := h.assetRepo.FindByUserID(r.Context(), userID)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 목록 조회 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := make([]AssetResponse, len(assets))
+        for i, asset := range assets </span><span class="cov0" title="0">{
+                response[i] = AssetResponse{
+                        ID:        asset.ID,
+                        UserID:    asset.UserID,
+                        Type:      string(asset.Type),
+                        Name:      asset.Name,
+                        Amount:    asset.Amount.Amount,
+                        Currency:  asset.Amount.Currency,
+                        CreatedAt: asset.CreatedAt,
+                        UpdatedAt: asset.UpdatedAt,
+                }
+        }</span>
+
+        <span class="cov0" title="0">respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        var req CreateAssetRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "잘못된 요청 형식")
+                return
+        }</span>
+
+        <span class="cov0" title="0">money, err := valueobjects.NewMoney(req.Amount, req.Currency)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, err.Error())
+                return
+        }</span>
+
+        <span class="cov0" title="0">asset := domain.NewAsset(req.UserID, domain.AssetType(req.Type), req.Name, money)
+        if err := h.assetRepo.Save(r.Context(), asset); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 생성 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := AssetResponse{
+                ID:        asset.ID,
+                UserID:    asset.UserID,
+                Type:      string(asset.Type),
+                Name:      asset.Name,
+                Amount:    asset.Amount.Amount,
+                Currency:  asset.Amount.Currency,
+                CreatedAt: asset.CreatedAt,
+                UpdatedAt: asset.UpdatedAt,
+        }
+
+        respondJSON(w, http.StatusCreated, response)</span>
+}
+
+func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        id := chi.URLParam(r, "id")
+        if id == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "자산 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">asset, err := h.assetRepo.FindByID(r.Context(), id)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := AssetResponse{
+                ID:        asset.ID,
+                UserID:    asset.UserID,
+                Type:      string(asset.Type),
+                Name:      asset.Name,
+                Amount:    asset.Amount.Amount,
+                Currency:  asset.Amount.Currency,
+                CreatedAt: asset.CreatedAt,
+                UpdatedAt: asset.UpdatedAt,
+        }
+
+        respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        id := chi.URLParam(r, "id")
+        if id == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "자산 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">var req CreateAssetRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "잘못된 요청 형식")
+                return
+        }</span>
+
+        <span class="cov0" title="0">asset, err := h.assetRepo.FindByID(r.Context(), id)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">money, err := valueobjects.NewMoney(req.Amount, req.Currency)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, err.Error())
+                return
+        }</span>
+
+        <span class="cov0" title="0">asset.Update(req.Name, domain.AssetType(req.Type), money)
+        if err := h.assetRepo.Update(r.Context(), asset); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 업데이트 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := AssetResponse{
+                ID:        asset.ID,
+                UserID:    asset.UserID,
+                Type:      string(asset.Type),
+                Name:      asset.Name,
+                Amount:    asset.Amount.Amount,
+                Currency:  asset.Amount.Currency,
+                CreatedAt: asset.CreatedAt,
+                UpdatedAt: asset.UpdatedAt,
+        }
+
+        respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        id := chi.URLParam(r, "id")
+        if id == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, ErrInvalidRequest, "자산 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.assetRepo.Delete(r.Context(), id); err != nil </span><span class="cov0"
+                                                                                                            title="0">{
+                respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 삭제 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">respondJSON(w, http.StatusNoContent, nil)</span>
+}
+
+// 응답 헬퍼 함수
+func respondJSON(w http.ResponseWriter, status int, data interface{}) <span class="cov0" title="0">{
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(status)
+        if data != nil </span><span class="cov0" title="0">{
+                if err := json.NewEncoder(w).Encode(data); err != nil </span><span class="cov0" title="0">{
+                        respondError(w, http.StatusInternalServerError, ErrInternalServer, "응답 생성 중 오류가 발생했습니다")
+                }</span>
+        }
+}
+
+func respondError(w http.ResponseWriter, status int, code string, message string) <span class="cov0" title="0">{
+        respondJSON(w, status, ErrorResponse{
+                Code:    code,
+                Message: message,
+        })
+}</span>
+</pre>
+
+    <pre class="file" id="file2" style="display: none">package domain
+
+import (
+        "context"
+        "time"
+
+        "github.com/aske/go_fi_chart/pkg/domain/valueobjects"
+        "github.com/google/uuid"
+)
+
+// AssetType 자산의 유형을 나타냅니다.
+type AssetType string
+
+const (
+        Cash       AssetType = "CASH"
+        Stock      AssetType = "STOCK"
+        Bond       AssetType = "BOND"
+        RealEstate AssetType = "REAL_ESTATE"
+        Crypto     AssetType = "CRYPTO"
+)
+
+// Asset 자산을 나타냅니다.
+type Asset struct {
+        ID        string
+        UserID    string
+        Type      AssetType
+        Name      string
+        Amount    valueobjects.Money
+        CreatedAt time.Time
+        UpdatedAt time.Time
+}
+
+// NewAsset 새로운 자산을 생성합니다.
+func NewAsset(userID string, assetType AssetType, name string, amount valueobjects.Money) *Asset <span class="cov0"
+                                                                                                       title="0">{
+        now := time.Now()
+        return &amp;Asset{
+                ID:        uuid.New().String(),
+                UserID:    userID,
+                Type:      assetType,
+                Name:      name,
+                Amount:    amount,
+                CreatedAt: now,
+                UpdatedAt: now,
+        }
+}</span>
+
+// Update 자산 정보를 업데이트합니다.
+func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Money) <span class="cov0" title="0">{
+        a.Name = name
+        a.Type = assetType
+        a.Amount = amount
+        a.UpdatedAt = time.Now()
+}</span>
+
+// AssetRepository 자산 저장소 인터페이스입니다.
+type AssetRepository interface {
+        Save(ctx context.Context, asset *Asset) error
+        FindByID(ctx context.Context, id string) (*Asset, error)
+        Update(ctx context.Context, asset *Asset) error
+        Delete(ctx context.Context, id string) error
+        FindByUserID(ctx context.Context, userID string) ([]*Asset, error)
+        FindByType(ctx context.Context, assetType AssetType) ([]*Asset, error)
+}
+</pre>
+
+    <pre class="file" id="file3" style="display: none">package domain
+
+import (
+        "context"
+        "fmt"
+        "sync"
+)
+
+// MemoryAssetRepository 인메모리 자산 저장소 구현체입니다.
+type MemoryAssetRepository struct {
+        assets map[string]*Asset
+        mutex  sync.RWMutex
+}
+
+// NewMemoryAssetRepository 새로운 인메모리 자산 저장소를 생성합니다.
+func NewMemoryAssetRepository() *MemoryAssetRepository <span class="cov0" title="0">{
+        return &amp;MemoryAssetRepository{
+                assets: make(map[string]*Asset),
+        }
+}</span>
+
+// Save 자산을 저장합니다.
+func (r *MemoryAssetRepository) Save(_ context.Context, asset *Asset) error <span class="cov0" title="0">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.assets[asset.ID]; exists </span><span class="cov0" title="0">{
+                return fmt.Errorf("자산이 이미 존재합니다: %s", asset.ID)
+        }</span>
+
+        <span class="cov0" title="0">r.assets[asset.ID] = asset
+        return nil</span>
+}
+
+// FindByID ID로 자산을 조회합니다.
+func (r *MemoryAssetRepository) FindByID(_ context.Context, id string) (*Asset, error) <span class="cov0" title="0">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        asset, exists := r.assets[id]
+        if !exists </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("자산을 찾을 수 없습니다: %s", id)
+        }</span>
+
+        <span class="cov0" title="0">return asset, nil</span>
+}
+
+// Update 자산을 업데이트합니다.
+func (r *MemoryAssetRepository) Update(_ context.Context, asset *Asset) error <span class="cov0" title="0">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.assets[asset.ID]; !exists </span><span class="cov0" title="0">{
+                return fmt.Errorf("자산을 찾을 수 없습니다: %s", asset.ID)
+        }</span>
+
+        <span class="cov0" title="0">r.assets[asset.ID] = asset
+        return nil</span>
+}
+
+// Delete ID로 자산을 삭제합니다.
+func (r *MemoryAssetRepository) Delete(_ context.Context, id string) error <span class="cov0" title="0">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.assets[id]; !exists </span><span class="cov0" title="0">{
+                return fmt.Errorf("자산을 찾을 수 없습니다: %s", id)
+        }</span>
+
+        <span class="cov0" title="0">delete(r.assets, id)
+        return nil</span>
+}
+
+// FindByUserID 사용자 ID로 자산 목록을 조회합니다.
+func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) <span class="cov0"
+                                                                                                       title="0">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var assets []*Asset
+        for _, asset := range r.assets </span><span class="cov0" title="0">{
+                if asset.UserID == userID </span><span class="cov0" title="0">{
+                        assets = append(assets, asset)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return assets, nil</span>
+}
+
+// FindByType 자산 유형으로 자산 목록을 조회합니다.
+func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType AssetType) ([]*Asset, error) <span class="cov0"
+                                                                                                           title="0">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        var assets []*Asset
+        for _, asset := range r.assets </span><span class="cov0" title="0">{
+                if asset.Type == assetType </span><span class="cov0" title="0">{
+                        assets = append(assets, asset)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return assets, nil</span>
+}
+</pre>
+
+</div>
+</body>
+<script>
+    (function () {
+        var files = document.getElementById('files');
+        var visible;
+        files.addEventListener('change', onChange, false);
+
+        function select(part) {
+            if (visible)
+                visible.style.display = 'none';
+            visible = document.getElementById(part);
+            if (!visible)
+                return;
+            files.value = part;
+            visible.style.display = 'block';
+            location.hash = part;
+        }
+
+        function onChange() {
+            select(files.value);
+            window.scrollTo(0, 0);
+        }
+
+        if (location.hash != "") {
+            select(location.hash.substr(1));
+        }
+        if (!visible) {
+            select("file0");
+        }
+    })();
+</script>
+</html>
