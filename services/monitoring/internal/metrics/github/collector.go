@@ -89,6 +89,7 @@ func (c *ActionCollector) AddActionMetric(name string, status ActionStatus) erro
 		Value:       status.toValue(),
 		Labels:      map[string]string{"action": name},
 		Description: "GitHub 액션의 상태를 나타냅니다. 0: 성공, 1: 실패, 2: 진행 중",
+		Timestamp:   time.Now(),
 	})
 }
 
@@ -100,5 +101,6 @@ func (c *ActionCollector) AddDurationMetric(name string, duration time.Duration)
 		Value:       duration.Seconds(),
 		Labels:      map[string]string{"action": name},
 		Description: "GitHub 액션의 실행 시간(초)입니다.",
+		Timestamp:   time.Now(),
 	})
 }
