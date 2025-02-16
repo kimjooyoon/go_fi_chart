@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/google/uuid"
 )
@@ -30,6 +31,7 @@ type Transaction struct {
 	ExecutedAt    time.Time
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	events        []events.Event
 }
 
 // NewTransaction은 새로운 거래를 생성합니다
@@ -63,7 +65,7 @@ func NewTransaction(
 	}
 
 	now := time.Now()
-	return &Transaction{
+	transaction := &Transaction{
 		ID:            uuid.New(),
 		UserID:        userID,
 		PortfolioID:   portfolioID,
@@ -75,7 +77,11 @@ func NewTransaction(
 		ExecutedAt:    executedAt,
 		CreatedAt:     now,
 		UpdatedAt:     now,
-	}, nil
+		events:        make([]events.Event, 0),
+	}
+
+	transaction.events = append(transaction.events, NewTransactionCreatedEvent(transaction))
+	return transaction, nil
 }
 
 // Validate는 거래의 유효성을 검증합니다
@@ -102,12 +108,32 @@ func (t *Transaction) Update(
 	executedPrice valueobjects.Money,
 	executedAt time.Time,
 ) {
+	prevAmount := t.Amount
+	prevQuantity := t.Quantity
+
 	t.Type = transactionType
 	t.Amount = amount
 	t.Quantity = quantity
 	t.ExecutedPrice = executedPrice
 	t.ExecutedAt = executedAt
 	t.UpdatedAt = time.Now()
+
+	t.events = append(t.events, NewTransactionUpdatedEvent(t, prevAmount, prevQuantity))
+}
+
+// MarkAsDeleted는 거래를 삭제 상태로 표시합니다
+func (t *Transaction) MarkAsDeleted() {
+	t.events = append(t.events, NewTransactionDeletedEvent(t))
+}
+
+// Events는 발생한 이벤트 목록을 반환합니다
+func (t *Transaction) Events() []events.Event {
+	return t.events
+}
+
+// ClearEvents는 이벤트 목록을 초기화합니다
+func (t *Transaction) ClearEvents() {
+	t.events = make([]events.Event, 0)
 }
 
 // TransactionRepository는 거래 저장소 인터페이스를 정의합니다
