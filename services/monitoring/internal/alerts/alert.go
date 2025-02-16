@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aske/go_fi_chart/internal/domain"
 	"github.com/aske/go_fi_chart/services/monitoring/internal/events"
 )
 
@@ -81,12 +82,16 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error {
 	}
 
 	// 알림 이벤트 발행
-	event := events.Event{
-		Type:      events.TypeAlertTriggered,
-		Source:    alert.Source,
-		Timestamp: alert.Timestamp,
-		Payload:   alert,
+	event := events.NewMonitoringEvent(
+		events.TypeAlertTriggered,
+		alert.Source,
+		alert,
+		alert.Metadata,
+	)
+
+	if err := n.publisher.Publish(ctx, event); err != nil {
+		return domain.NewError("alerts", domain.ErrCodeInternal, "알림 이벤트 발행 실패")
 	}
 
-	return n.publisher.Publish(ctx, event)
+	return nil
 }

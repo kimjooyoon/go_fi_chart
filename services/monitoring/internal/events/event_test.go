@@ -4,18 +4,18 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
+	"github.com/aske/go_fi_chart/internal/domain"
 	"github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockHandler struct {
 	mu     sync.Mutex
-	events []Event
+	events []domain.Event
 }
 
-func (h *mockHandler) Handle(_ context.Context, event Event) error {
+func (h *mockHandler) Handle(_ context.Context, event domain.Event) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.events = append(h.events, event)
@@ -34,14 +34,13 @@ func Test_NewSimplePublisher_should_create_empty_publisher(t *testing.T) {
 func Test_SimplePublisher_should_publish_event_to_subscribers(t *testing.T) {
 	// Given
 	publisher := NewSimplePublisher()
-	handler := &mockHandler{events: make([]Event, 0)}
+	handler := &mockHandler{events: make([]domain.Event, 0)}
 	_ = publisher.Subscribe(handler)
 
-	event := Event{
-		Type:      TypeMetricCollected,
-		Source:    "test",
-		Timestamp: time.Now(),
-		Payload: MetricPayload{
+	event := NewMonitoringEvent(
+		TypeMetricCollected,
+		"test",
+		MetricPayload{
 			Metrics: []metrics.Metric{
 				{
 					Name:  "test_metric",
@@ -50,7 +49,8 @@ func Test_SimplePublisher_should_publish_event_to_subscribers(t *testing.T) {
 				},
 			},
 		},
-	}
+		nil,
+	)
 
 	// When
 	err := publisher.Publish(context.Background(), event)
@@ -58,21 +58,22 @@ func Test_SimplePublisher_should_publish_event_to_subscribers(t *testing.T) {
 	// Then
 	assert.NoError(t, err)
 	assert.Len(t, handler.events, 1)
-	assert.Equal(t, event.Type, handler.events[0].Type)
-	assert.Equal(t, event.Source, handler.events[0].Source)
+	assert.Equal(t, TypeMetricCollected, handler.events[0].EventType())
+	assert.Equal(t, "test", handler.events[0].Source())
 }
 
 func Test_SimplePublisher_should_unsubscribe_handler(t *testing.T) {
 	// Given
 	publisher := NewSimplePublisher()
-	handler := &mockHandler{events: make([]Event, 0)}
+	handler := &mockHandler{events: make([]domain.Event, 0)}
 	_ = publisher.Subscribe(handler)
 
-	event := Event{
-		Type:      TypeMetricCollected,
-		Source:    "test",
-		Timestamp: time.Now(),
-	}
+	event := NewMonitoringEvent(
+		TypeMetricCollected,
+		"test",
+		nil,
+		nil,
+	)
 
 	// When
 	_ = publisher.Unsubscribe(handler)
@@ -86,7 +87,7 @@ func Test_SimplePublisher_should_unsubscribe_handler(t *testing.T) {
 func Test_SimplePublisher_should_be_thread_safe(_ *testing.T) {
 	// Given
 	publisher := NewSimplePublisher()
-	handler := &mockHandler{events: make([]Event, 0)}
+	handler := &mockHandler{events: make([]domain.Event, 0)}
 	_ = publisher.Subscribe(handler)
 	iterations := 1000
 	done := make(chan bool)
@@ -94,18 +95,19 @@ func Test_SimplePublisher_should_be_thread_safe(_ *testing.T) {
 	// When
 	go func() {
 		for i := 0; i < iterations; i++ {
-			_ = publisher.Publish(context.Background(), Event{
-				Type:      TypeMetricCollected,
-				Source:    "test",
-				Timestamp: time.Now(),
-			})
+			_ = publisher.Publish(context.Background(), NewMonitoringEvent(
+				TypeMetricCollected,
+				"test",
+				nil,
+				nil,
+			))
 		}
 		done <- true
 	}()
 
 	go func() {
 		for i := 0; i < iterations/2; i++ {
-			_ = publisher.Subscribe(&mockHandler{events: make([]Event, 0)})
+			_ = publisher.Subscribe(&mockHandler{events: make([]domain.Event, 0)})
 		}
 		done <- true
 	}()

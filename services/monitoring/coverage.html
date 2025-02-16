@@ -97,10 +97,10 @@
     <div id="nav">
         <select id="files">
 
-            <option value="file0">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go (94.1%)
+            <option value="file0">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go (89.5%)
             </option>
 
-            <option value="file1">github.com/aske/go_fi_chart/services/monitoring/internal/events/event.go (94.4%)
+            <option value="file1">github.com/aske/go_fi_chart/services/monitoring/internal/events/event.go (94.7%)
             </option>
 
             <option value="file2">
@@ -137,6 +137,7 @@ import (
         "sync"
         "time"
 
+        "github.com/aske/go_fi_chart/internal/domain"
         "github.com/aske/go_fi_chart/services/monitoring/internal/events"
 )
 
@@ -213,14 +214,18 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error <span cl
         }
 
         // 알림 이벤트 발행
-        <span class="cov8" title="1">event := events.Event{
-                Type:      events.TypeAlertTriggered,
-                Source:    alert.Source,
-                Timestamp: alert.Timestamp,
-                Payload:   alert,
-        }
+        <span class="cov8" title="1">event := events.NewMonitoringEvent(
+                events.TypeAlertTriggered,
+                alert.Source,
+                alert,
+                alert.Metadata,
+        )
 
-        return n.publisher.Publish(ctx, event)</span>
+        if err := n.publisher.Publish(ctx, event); err != nil </span><span class="cov0" title="0">{
+                return domain.NewError("alerts", domain.ErrCodeInternal, "알림 이벤트 발행 실패")
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
 }
 </pre>
 
@@ -231,39 +236,42 @@ import (
         "sync"
         "time"
 
+        "github.com/aske/go_fi_chart/internal/domain"
         "github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
 )
-
-// EventType 이벤트의 종류를 나타냅니다.
-type EventType string
-
-const (
-        TypeMetricCollected EventType = "METRIC_COLLECTED"
-        TypeAlertTriggered  EventType = "ALERT_TRIGGERED"
-)
-
-// Event 모니터링 시스템의 이벤트를 나타냅니다.
-type Event struct {
-        Type      EventType         `json:"type"`
-        Source    string            `json:"source"`
-        Timestamp time.Time         `json:"timestamp"`
-        Payload   interface{}       `json:"payload"`
-        Metadata  map[string]string `json:"metadata,omitempty"`
-}
 
 // MetricPayload 메트릭 수집 이벤트의 페이로드입니다.
 type MetricPayload struct {
         Metrics []metrics.Metric `json:"metrics"`
 }
 
+// MonitoringEvent 모니터링 시스템의 이벤트입니다.
+type MonitoringEvent struct {
+        domain.BaseEvent
+}
+
+// NewMonitoringEvent 새로운 모니터링 이벤트를 생성합니다.
+func NewMonitoringEvent(eventType string, source string, payload interface{}, metadata map[string]string) domain.Event <span
+                class="cov8" title="1">{
+        return &amp;MonitoringEvent{
+                BaseEvent: domain.BaseEvent{
+                        Type: eventType,
+                        Time: time.Now(),
+                        Data: payload,
+                        Src:  source,
+                        Meta: metadata,
+                },
+        }
+}</span>
+
 // Handler 이벤트를 처리하는 핸들러입니다.
 type Handler interface {
-        Handle(ctx context.Context, event Event) error
+        Handle(ctx context.Context, event domain.Event) error
 }
 
 // Publisher 이벤트를 발행하는 인터페이스입니다.
 type Publisher interface {
-        Publish(ctx context.Context, event Event) error
+        Publish(ctx context.Context, event domain.Event) error
         Subscribe(handler Handler) error
         Unsubscribe(handler Handler) error
 }
@@ -282,7 +290,7 @@ func NewSimplePublisher() *SimplePublisher <span class="cov8" title="1">{
 }</span>
 
 // Publish 이벤트를 발행합니다.
-func (p *SimplePublisher) Publish(ctx context.Context, event Event) error <span class="cov8" title="1">{
+func (p *SimplePublisher) Publish(ctx context.Context, event domain.Event) error <span class="cov8" title="1">{
         p.mu.RLock()
         defer p.mu.RUnlock()
 
@@ -317,6 +325,12 @@ func (p *SimplePublisher) Unsubscribe(handler Handler) error <span class="cov8" 
         }
         <span class="cov8" title="1">return nil</span>
 }
+
+// 이벤트 타입 상수
+const (
+        TypeMetricCollected = "METRIC_COLLECTED"
+        TypeAlertTriggered  = "ALERT_TRIGGERED"
+)
 </pre>
 
     <pre class="file" id="file2" style="display: none">package prometheus

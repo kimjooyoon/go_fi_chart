@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aske/go_fi_chart/internal/domain"
 	"github.com/aske/go_fi_chart/services/monitoring/internal/events"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,10 +25,10 @@ func (n *mockNotifier) Notify(_ context.Context, alert Alert) error {
 
 type mockPublisher struct {
 	mu     sync.Mutex
-	events []events.Event
+	events []domain.Event
 }
 
-func (p *mockPublisher) Publish(_ context.Context, event events.Event) error {
+func (p *mockPublisher) Publish(_ context.Context, event domain.Event) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.events = append(p.events, event)
@@ -44,7 +45,7 @@ func (p *mockPublisher) Unsubscribe(_ events.Handler) error {
 
 func Test_NewSimpleNotifier_should_create_empty_notifier(t *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]events.Event, 0)}
+	publisher := &mockPublisher{events: make([]domain.Event, 0)}
 
 	// When
 	notifier := NewSimpleNotifier(publisher)
@@ -56,7 +57,7 @@ func Test_NewSimpleNotifier_should_create_empty_notifier(t *testing.T) {
 
 func Test_SimpleNotifier_should_notify_handlers_and_publish_event(t *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]events.Event, 0)}
+	publisher := &mockPublisher{events: make([]domain.Event, 0)}
 	notifier := NewSimpleNotifier(publisher)
 	handler := &mockNotifier{alerts: make([]Alert, 0)}
 	notifier.AddHandler(handler)
@@ -83,13 +84,13 @@ func Test_SimpleNotifier_should_notify_handlers_and_publish_event(t *testing.T) 
 	assert.Equal(t, alert.Message, handler.alerts[0].Message)
 
 	assert.Len(t, publisher.events, 1)
-	assert.Equal(t, events.TypeAlertTriggered, publisher.events[0].Type)
-	assert.Equal(t, alert.Source, publisher.events[0].Source)
+	assert.Equal(t, events.TypeAlertTriggered, publisher.events[0].EventType())
+	assert.Equal(t, alert.Source, publisher.events[0].Source())
 }
 
 func Test_SimpleNotifier_should_remove_handler(t *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]events.Event, 0)}
+	publisher := &mockPublisher{events: make([]domain.Event, 0)}
 	notifier := NewSimpleNotifier(publisher)
 	handler := &mockNotifier{alerts: make([]Alert, 0)}
 	notifier.AddHandler(handler)
@@ -114,7 +115,7 @@ func Test_SimpleNotifier_should_remove_handler(t *testing.T) {
 
 func Test_SimpleNotifier_should_be_thread_safe(_ *testing.T) {
 	// Given
-	publisher := &mockPublisher{events: make([]events.Event, 0)}
+	publisher := &mockPublisher{events: make([]domain.Event, 0)}
 	notifier := NewSimpleNotifier(publisher)
 	handler := &mockNotifier{alerts: make([]Alert, 0)}
 	notifier.AddHandler(handler)

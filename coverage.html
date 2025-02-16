@@ -56,41 +56,55 @@
 				<select id="files">
 				
 				<option value="file0">github.com/aske/go_fi_chart/cmd/server/main.go (0.0%)</option>
-				
-				<option value="file1">github.com/aske/go_fi_chart/internal/domain/asset/id_generator.go (100.0%)</option>
-				
-				<option value="file2">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go (76.0%)</option>
 
-                        <option value="file3">github.com/aske/go_fi_chart/internal/domain/asset/model.go (100.0%)
-                        </option>
-				
-				<option value="file4">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go (100.0%)</option>
-				
-				<option value="file5">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
+                        <option value="file1">github.com/aske/go_fi_chart/internal/config/config.go (0.0%)</option>
 
-                        <option value="file6">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
-                                (94.1%)
+                        <option value="file2">github.com/aske/go_fi_chart/internal/di/container.go (0.0%)</option>
+
+                        <option value="file3">github.com/aske/go_fi_chart/internal/domain/asset/id_generator.go
+                                (100.0%)
                         </option>
 
-                        <option value="file7">github.com/aske/go_fi_chart/services/monitoring/internal/events/event.go
-                                (94.4%)
+                        <option value="file4">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go
+                                (76.0%)
                         </option>
 
-                        <option value="file8">
+                        <option value="file5">github.com/aske/go_fi_chart/internal/domain/asset/model.go (100.0%)
+                        </option>
+
+                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go
+                                (100.0%)
+                        </option>
+
+                        <option value="file7">github.com/aske/go_fi_chart/internal/domain/error.go (0.0%)</option>
+
+                        <option value="file8">github.com/aske/go_fi_chart/internal/domain/event.go (0.0%)</option>
+
+                        <option value="file9">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
+
+                        <option value="file10">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
+                                (89.5%)
+                        </option>
+
+                        <option value="file11">github.com/aske/go_fi_chart/services/monitoring/internal/events/event.go
+                                (94.7%)
+                        </option>
+
+                        <option value="file12">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/exporters/prometheus/exporter.go
                                 (93.5%)
                         </option>
 
-                        <option value="file9">
+                        <option value="file13">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (100.0%)
                         </option>
 
-                        <option value="file10">
+                        <option value="file14">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/github/collector.go
                                 (100.0%)
                         </option>
 
-                        <option value="file11">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                        <option value="file15">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
                                 (100.0%)
                         </option>
 
@@ -136,8 +150,172 @@ func main() <span class="cov0" title="0">{
         }</span>
 }
 </pre>
-		
-		<pre class="file" id="file1" style="display: none">package asset
+
+                <pre class="file" id="file1" style="display: none">package config
+
+import "time"
+
+// Config 애플리케이션 전체 설정입니다.
+type Config struct {
+        Server   ServerConfig   `yaml:"server"`
+        Metrics  MetricsConfig  `yaml:"metrics"`
+        Database DatabaseConfig `yaml:"database"`
+}
+
+// ServerConfig HTTP 서버 설정입니다.
+type ServerConfig struct {
+        Host            string        `yaml:"host"`
+        Port            int           `yaml:"port"`
+        ReadTimeout     time.Duration `yaml:"readTimeout"`
+        WriteTimeout    time.Duration `yaml:"writeTimeout"`
+        IdleTimeout     time.Duration `yaml:"idleTimeout"`
+        ShutdownTimeout time.Duration `yaml:"shutdownTimeout"`
+}
+
+// MetricsConfig 메트릭 설정입니다.
+type MetricsConfig struct {
+        Enabled         bool          `yaml:"enabled"`
+        CollectInterval time.Duration `yaml:"collectInterval"`
+        ExportInterval  time.Duration `yaml:"exportInterval"`
+        RetentionPeriod time.Duration `yaml:"retentionPeriod"`
+}
+
+// DatabaseConfig 데이터베이스 설정입니다.
+type DatabaseConfig struct {
+        Driver          string        `yaml:"driver"`
+        Host            string        `yaml:"host"`
+        Port            int           `yaml:"port"`
+        Name            string        `yaml:"name"`
+        User            string        `yaml:"user"`
+        Password        string        `yaml:"password"`
+        ConnectTimeout  time.Duration `yaml:"connectTimeout"`
+        MaxOpenConns    int           `yaml:"maxOpenConns"`
+        MaxIdleConns    int           `yaml:"maxIdleConns"`
+        ConnMaxLifetime time.Duration `yaml:"connMaxLifetime"`
+}
+
+// NewDefaultConfig 기본 설정값을 가진 Config를 생성합니다.
+func NewDefaultConfig() *Config <span class="cov0" title="0">{
+        return &amp;Config{
+                Server: ServerConfig{
+                        Host:            "localhost",
+                        Port:            8080,
+                        ReadTimeout:     5 * time.Second,
+                        WriteTimeout:    10 * time.Second,
+                        IdleTimeout:     120 * time.Second,
+                        ShutdownTimeout: 5 * time.Second,
+                },
+                Metrics: MetricsConfig{
+                        Enabled:         true,
+                        CollectInterval: 10 * time.Second,
+                        ExportInterval:  30 * time.Second,
+                        RetentionPeriod: 24 * time.Hour,
+                },
+                Database: DatabaseConfig{
+                        Driver:          "postgres",
+                        Host:            "localhost",
+                        Port:            5432,
+                        ConnectTimeout:  5 * time.Second,
+                        MaxOpenConns:    25,
+                        MaxIdleConns:    5,
+                        ConnMaxLifetime: 5 * time.Minute,
+                },
+        }
+}</span>
+</pre>
+
+                <pre class="file" id="file2" style="display: none">package di
+
+import (
+        "fmt"
+        "reflect"
+        "sync"
+)
+
+// Container 의존성 주입 컨테이너 인터페이스입니다.
+type Container interface {
+        // Register 의존성을 등록합니다.
+        Register(name string, constructor interface{}) error
+        // Resolve 의존성을 해결합니다.
+        Resolve(name string) (interface{}, error)
+}
+
+// SimpleContainer 기본 의존성 주입 컨테이너 구현체입니다.
+type SimpleContainer struct {
+        mu           sync.RWMutex
+        constructors map[string]interface{}
+        instances    map[string]interface{}
+}
+
+// NewSimpleContainer 새로운 SimpleContainer를 생성합니다.
+func NewSimpleContainer() *SimpleContainer <span class="cov0" title="0">{
+        return &amp;SimpleContainer{
+                constructors: make(map[string]interface{}),
+                instances:    make(map[string]interface{}),
+        }
+}</span>
+
+// Register 의존성 생성자를 등록합니다.
+func (c *SimpleContainer) Register(name string, constructor interface{}) error <span class="cov0" title="0">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        if constructor == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("constructor cannot be nil")
+        }</span>
+
+        <span class="cov0" title="0">if _, exists := c.constructors[name]; exists </span><span class="cov0" title="0">{
+                return fmt.Errorf("dependency %s already registered", name)
+        }</span>
+
+        <span class="cov0" title="0">c.constructors[name] = constructor
+        return nil</span>
+}
+
+// Resolve 의존성을 해결하고 인스턴스를 반환합니다.
+func (c *SimpleContainer) Resolve(name string) (interface{}, error) <span class="cov0" title="0">{
+        c.mu.Lock()
+        defer c.mu.Unlock()
+
+        // 이미 생성된 인스턴스가 있는지 확인
+        if instance, exists := c.instances[name]; exists </span><span class="cov0" title="0">{
+                return instance, nil
+        }</span>
+
+        // 생성자 찾기
+        <span class="cov0" title="0">constructor, exists := c.constructors[name]
+        if !exists </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("dependency %s not registered", name)
+        }</span>
+
+        // 생성자 호출
+        <span class="cov0" title="0">constructorValue := reflect.ValueOf(constructor)
+        if constructorValue.Kind() != reflect.Func </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("constructor for %s must be a function", name)
+        }</span>
+
+        // 생성자 파라미터 해결
+        <span class="cov0" title="0">params := make([]reflect.Value, constructorValue.Type().NumIn())
+        for i := 0; i &lt; constructorValue.Type().NumIn(); i++ </span><span class="cov0" title="0">{
+                paramType := constructorValue.Type().In(i)
+                // TODO: 파라미터 의존성 해결 로직 구현
+                params[i] = reflect.New(paramType).Elem()
+        }</span>
+
+        // 인스턴스 생성
+        <span class="cov0" title="0">results := constructorValue.Call(params)
+        if len(results) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("constructor for %s must return at least one value", name)
+        }</span>
+
+        <span class="cov0" title="0">instance := results[0].Interface()
+        c.instances[name] = instance
+
+        return instance, nil</span>
+}
+</pre>
+
+                <pre class="file" id="file3" style="display: none">package asset
 
 import (
         "github.com/google/uuid"
@@ -150,8 +328,8 @@ func generateID() string <span class="cov8" title="1">{
         return uuid.New().String()
 }</span>
 </pre>
-		
-		<pre class="file" id="file2" style="display: none">package asset
+
+                <pre class="file" id="file4" style="display: none">package asset
 
 import (
         "context"
@@ -326,7 +504,7 @@ func NewMemoryTransactionRepository() *MemoryTransactionRepository <span class="
 
 // FindByAssetID 자산 ID로 Transaction 목록을 조회합니다.
 func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID string) ([]*Transaction, error) <span
-                        class="cov0" title="0">{
+                                class="cov0" title="0">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
@@ -341,14 +519,14 @@ func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID s
 
 // FindByDateRange 날짜 범위로 Transaction 목록을 조회합니다.
 func (r *MemoryTransactionRepository) FindByDateRange(_ context.Context, start, end time.Time) ([]*Transaction, error) <span
-                        class="cov8" title="1">{
+                                class="cov8" title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
         var result []*Transaction
         for _, tx := range r.data </span><span class="cov8" title="1">{
                 if (tx.Date.Equal(start) || tx.Date.After(start)) &amp;&amp; (tx.Date.Equal(end) || tx.Date.Before(end)) </span><span
-                        class="cov8" title="1">{
+                                class="cov8" title="1">{
                         result = append(result, tx)
                 }</span>
         }
@@ -357,7 +535,7 @@ func (r *MemoryTransactionRepository) FindByDateRange(_ context.Context, start, 
 
 // GetTotalAmount 자산 ID에 대한 총 거래 금액을 계산합니다.
 func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID string) (float64, error) <span
-                        class="cov8" title="1">{
+                                class="cov8" title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
@@ -391,7 +569,7 @@ func NewMemoryPortfolioRepository() *MemoryPortfolioRepository <span class="cov8
 
 // FindByUserID 사용자 ID로 Portfolio를 조회합니다.
 func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID string) (*Portfolio, error) <span
-                        class="cov8" title="1">{
+                                class="cov8" title="1">{
         r.mutex.RLock()
         defer r.mutex.RUnlock()
 
@@ -405,7 +583,7 @@ func (r *MemoryPortfolioRepository) FindByUserID(_ context.Context, userID strin
 
 // UpdateAssets Portfolio의 자산 구성을 업데이트합니다.
 func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, assets []PortfolioAsset) error <span
-                        class="cov8" title="1">{
+                                class="cov8" title="1">{
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
@@ -420,8 +598,8 @@ func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, a
         return nil</span>
 }
 </pre>
-		
-		<pre class="file" id="file3" style="display: none">package asset
+
+                <pre class="file" id="file5" style="display: none">package asset
 
 import (
         "time"
@@ -531,7 +709,7 @@ func NewAsset(userID string, assetType Type, name string, amount float64) *Asset
 }</span>
 
 func NewTransaction(assetID string, transactionType TransactionType, amount float64, category string, description string) *Transaction <span
-                        class="cov8" title="1">{
+                                class="cov8" title="1">{
         now := time.Now()
         return &amp;Transaction{
                 ID:          generateID(),
@@ -556,8 +734,8 @@ func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio <span class
         }
 }</span>
 </pre>
-		
-		<pre class="file" id="file4" style="display: none">package asset
+
+                <pre class="file" id="file6" style="display: none">package asset
 
 import (
         "time"
@@ -733,8 +911,108 @@ func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class
         <span class="cov8" title="1">return nil</span>
 }
 </pre>
-		
-		<pre class="file" id="file5" style="display: none">package domain
+
+                <pre class="file" id="file7" style="display: none">package domain
+
+import "fmt"
+
+// Error 도메인 에러 인터페이스입니다.
+type Error interface {
+        error
+        // Code 에러 코드를 반환합니다.
+        Code() string
+        // Domain 에러가 발생한 도메인을 반환합니다.
+        Domain() string
+}
+
+// BaseError 기본 도메인 에러 구현체입니다.
+type BaseError struct {
+        domain string
+        code   string
+        msg    string
+}
+
+// NewError 새로운 도메인 에러를 생성합니다.
+func NewError(domain string, code string, msg string) Error <span class="cov0" title="0">{
+        return &amp;BaseError{
+                domain: domain,
+                code:   code,
+                msg:    msg,
+        }
+}</span>
+
+func (e *BaseError) Error() string <span class="cov0" title="0">{
+        return fmt.Sprintf("[%s] %s: %s", e.domain, e.code, e.msg)
+}</span>
+
+func (e *BaseError) Code() string <span class="cov0" title="0">{
+        return e.code
+}</span>
+
+func (e *BaseError) Domain() string <span class="cov0" title="0">{
+        return e.domain
+}</span>
+
+// 자주 사용되는 에러 코드 상수
+const (
+        ErrCodeNotFound         = "NOT_FOUND"
+        ErrCodeAlreadyExists    = "ALREADY_EXISTS"
+        ErrCodeInvalidArgument  = "INVALID_ARGUMENT"
+        ErrCodeInvalidOperation = "INVALID_OPERATION"
+        ErrCodeNotImplemented   = "NOT_IMPLEMENTED"
+        ErrCodeInternal         = "INTERNAL"
+)
+</pre>
+
+                <pre class="file" id="file8" style="display: none">package domain
+
+import "time"
+
+// Event 도메인 이벤트 인터페이스입니다.
+type Event interface {
+        // EventType 이벤트의 타입을 반환합니다.
+        EventType() string
+        // Timestamp 이벤트가 발생한 시간을 반환합니다.
+        Timestamp() time.Time
+        // Payload 이벤트의 페이로드를 반환합니다.
+        Payload() interface{}
+        // Source 이벤트의 발생 소스를 반환합니다.
+        Source() string
+        // Metadata 이벤트의 메타데이터를 반환합니다.
+        Metadata() map[string]string
+}
+
+// BaseEvent 기본 이벤트 구현체입니다.
+type BaseEvent struct {
+        Type string
+        Time time.Time
+        Data interface{}
+        Src  string
+        Meta map[string]string
+}
+
+func (e *BaseEvent) EventType() string <span class="cov0" title="0">{
+        return e.Type
+}</span>
+
+func (e *BaseEvent) Timestamp() time.Time <span class="cov0" title="0">{
+        return e.Time
+}</span>
+
+func (e *BaseEvent) Payload() interface{} <span class="cov0" title="0">{
+        return e.Data
+}</span>
+
+func (e *BaseEvent) Source() string <span class="cov0" title="0">{
+        return e.Src
+}</span>
+
+func (e *BaseEvent) Metadata() map[string]string <span class="cov0" title="0">{
+        return e.Meta
+}</span>
+</pre>
+
+                <pre class="file" id="file9" style="display: none">package domain
 
 import (
         "context"
@@ -791,13 +1069,14 @@ func NewRepositoryError(op string, err error) error <span class="cov0" title="0"
 }</span>
 </pre>
 
-                <pre class="file" id="file6" style="display: none">package alerts
+                <pre class="file" id="file10" style="display: none">package alerts
 
 import (
         "context"
         "sync"
         "time"
 
+        "github.com/aske/go_fi_chart/internal/domain"
         "github.com/aske/go_fi_chart/services/monitoring/internal/events"
 )
 
@@ -874,57 +1153,64 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error <span cl
         }
 
         // 알림 이벤트 발행
-        <span class="cov8" title="1">event := events.Event{
-                Type:      events.TypeAlertTriggered,
-                Source:    alert.Source,
-                Timestamp: alert.Timestamp,
-                Payload:   alert,
-        }
+        <span class="cov8" title="1">event := events.NewMonitoringEvent(
+                events.TypeAlertTriggered,
+                alert.Source,
+                alert,
+                alert.Metadata,
+        )
 
-        return n.publisher.Publish(ctx, event)</span>
+        if err := n.publisher.Publish(ctx, event); err != nil </span><span class="cov0" title="0">{
+                return domain.NewError("alerts", domain.ErrCodeInternal, "알림 이벤트 발행 실패")
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
 }
 </pre>
 
-                <pre class="file" id="file7" style="display: none">package events
+                <pre class="file" id="file11" style="display: none">package events
 
 import (
         "context"
         "sync"
         "time"
 
+        "github.com/aske/go_fi_chart/internal/domain"
         "github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
 )
-
-// EventType 이벤트의 종류를 나타냅니다.
-type EventType string
-
-const (
-        TypeMetricCollected EventType = "METRIC_COLLECTED"
-        TypeAlertTriggered  EventType = "ALERT_TRIGGERED"
-)
-
-// Event 모니터링 시스템의 이벤트를 나타냅니다.
-type Event struct {
-        Type      EventType         `json:"type"`
-        Source    string            `json:"source"`
-        Timestamp time.Time         `json:"timestamp"`
-        Payload   interface{}       `json:"payload"`
-        Metadata  map[string]string `json:"metadata,omitempty"`
-}
 
 // MetricPayload 메트릭 수집 이벤트의 페이로드입니다.
 type MetricPayload struct {
         Metrics []metrics.Metric `json:"metrics"`
 }
 
+// MonitoringEvent 모니터링 시스템의 이벤트입니다.
+type MonitoringEvent struct {
+        domain.BaseEvent
+}
+
+// NewMonitoringEvent 새로운 모니터링 이벤트를 생성합니다.
+func NewMonitoringEvent(eventType string, source string, payload interface{}, metadata map[string]string) domain.Event <span
+                                class="cov8" title="1">{
+        return &amp;MonitoringEvent{
+                BaseEvent: domain.BaseEvent{
+                        Type: eventType,
+                        Time: time.Now(),
+                        Data: payload,
+                        Src:  source,
+                        Meta: metadata,
+                },
+        }
+}</span>
+
 // Handler 이벤트를 처리하는 핸들러입니다.
 type Handler interface {
-        Handle(ctx context.Context, event Event) error
+        Handle(ctx context.Context, event domain.Event) error
 }
 
 // Publisher 이벤트를 발행하는 인터페이스입니다.
 type Publisher interface {
-        Publish(ctx context.Context, event Event) error
+        Publish(ctx context.Context, event domain.Event) error
         Subscribe(handler Handler) error
         Unsubscribe(handler Handler) error
 }
@@ -943,7 +1229,7 @@ func NewSimplePublisher() *SimplePublisher <span class="cov8" title="1">{
 }</span>
 
 // Publish 이벤트를 발행합니다.
-func (p *SimplePublisher) Publish(ctx context.Context, event Event) error <span class="cov8" title="1">{
+func (p *SimplePublisher) Publish(ctx context.Context, event domain.Event) error <span class="cov8" title="1">{
         p.mu.RLock()
         defer p.mu.RUnlock()
 
@@ -978,9 +1264,15 @@ func (p *SimplePublisher) Unsubscribe(handler Handler) error <span class="cov8" 
         }
         <span class="cov8" title="1">return nil</span>
 }
+
+// 이벤트 타입 상수
+const (
+        TypeMetricCollected = "METRIC_COLLECTED"
+        TypeAlertTriggered  = "ALERT_TRIGGERED"
+)
 </pre>
 
-                <pre class="file" id="file8" style="display: none">package prometheus
+                <pre class="file" id="file12" style="display: none">package prometheus
 
 import (
         "context"
@@ -1088,7 +1380,7 @@ func (e *Exporter) getOrCreateCollector(m metrics.Metric) (prometheus.Collector,
 }
 </pre>
 
-                <pre class="file" id="file9" style="display: none">package metrics
+                <pre class="file" id="file13" style="display: none">package metrics
 
 import (
         "context"
@@ -1160,7 +1452,7 @@ func (c *SimpleCollector) Reset() <span class="cov8" title="1">{
 }</span>
 </pre>
 
-                <pre class="file" id="file10" style="display: none">package github
+                <pre class="file" id="file14" style="display: none">package github
 
 import (
         "context"
@@ -1233,7 +1525,7 @@ func (c *ActionCollector) AddActionMetric(actionMetric ActionMetric) <span class
 }</span>
 </pre>
 
-                <pre class="file" id="file11" style="display: none">package health
+                <pre class="file" id="file15" style="display: none">package health
 
 import (
         "context"

@@ -5,39 +5,41 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aske/go_fi_chart/internal/domain"
 	"github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
 )
-
-// EventType 이벤트의 종류를 나타냅니다.
-type EventType string
-
-const (
-	TypeMetricCollected EventType = "METRIC_COLLECTED"
-	TypeAlertTriggered  EventType = "ALERT_TRIGGERED"
-)
-
-// Event 모니터링 시스템의 이벤트를 나타냅니다.
-type Event struct {
-	Type      EventType         `json:"type"`
-	Source    string            `json:"source"`
-	Timestamp time.Time         `json:"timestamp"`
-	Payload   interface{}       `json:"payload"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-}
 
 // MetricPayload 메트릭 수집 이벤트의 페이로드입니다.
 type MetricPayload struct {
 	Metrics []metrics.Metric `json:"metrics"`
 }
 
+// MonitoringEvent 모니터링 시스템의 이벤트입니다.
+type MonitoringEvent struct {
+	domain.BaseEvent
+}
+
+// NewMonitoringEvent 새로운 모니터링 이벤트를 생성합니다.
+func NewMonitoringEvent(eventType string, source string, payload interface{}, metadata map[string]string) domain.Event {
+	return &MonitoringEvent{
+		BaseEvent: domain.BaseEvent{
+			Type: eventType,
+			Time: time.Now(),
+			Data: payload,
+			Src:  source,
+			Meta: metadata,
+		},
+	}
+}
+
 // Handler 이벤트를 처리하는 핸들러입니다.
 type Handler interface {
-	Handle(ctx context.Context, event Event) error
+	Handle(ctx context.Context, event domain.Event) error
 }
 
 // Publisher 이벤트를 발행하는 인터페이스입니다.
 type Publisher interface {
-	Publish(ctx context.Context, event Event) error
+	Publish(ctx context.Context, event domain.Event) error
 	Subscribe(handler Handler) error
 	Unsubscribe(handler Handler) error
 }
@@ -56,7 +58,7 @@ func NewSimplePublisher() *SimplePublisher {
 }
 
 // Publish 이벤트를 발행합니다.
-func (p *SimplePublisher) Publish(ctx context.Context, event Event) error {
+func (p *SimplePublisher) Publish(ctx context.Context, event domain.Event) error {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -91,3 +93,9 @@ func (p *SimplePublisher) Unsubscribe(handler Handler) error {
 	}
 	return nil
 }
+
+// 이벤트 타입 상수
+const (
+	TypeMetricCollected = "METRIC_COLLECTED"
+	TypeAlertTriggered  = "ALERT_TRIGGERED"
+)
