@@ -249,22 +249,25 @@ type Asset struct {
 	Type         Type
 	Name         string
 	Amount       Money
-	Performance  Performance
-	Goals        []Goal
-	Achievements []Achievement
+	Performance  *Performance
+	Goals        []*Goal
+	Achievements []*Achievement
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	events       []event.Event // 미발행 이벤트 저장
 }
 
+// GetID Entity 인터페이스 구현
 func (a *Asset) GetID() string {
 	return a.ID
 }
 
+// GetCreatedAt Entity 인터페이스 구현
 func (a *Asset) GetCreatedAt() time.Time {
 	return a.CreatedAt
 }
 
+// GetUpdatedAt Entity 인터페이스 구현
 func (a *Asset) GetUpdatedAt() time.Time {
 	return a.UpdatedAt
 }
@@ -294,13 +297,13 @@ func NewAsset(userID string, assetType Type, name string, amount float64, curren
 		Type:   assetType,
 		Name:   name,
 		Amount: money,
-		Performance: Performance{
+		Performance: &Performance{
 			StartValue:     money,
 			CurrentValue:   money,
 			LastUpdateTime: now,
 		},
-		Goals:        make([]Goal, 0),
-		Achievements: make([]Achievement, 0),
+		Goals:        make([]*Goal, 0),
+		Achievements: make([]*Achievement, 0),
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}, nil
@@ -319,7 +322,7 @@ func (a *Asset) AddGoal(goalType GoalType, target Money, deadline time.Time) *Go
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	a.Goals = append(a.Goals, *goal)
+	a.Goals = append(a.Goals, goal)
 	return goal
 }
 
@@ -346,7 +349,7 @@ func (a *Asset) AddAchievement(achievementType AchievementType, conditions []Con
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
-	a.Achievements = append(a.Achievements, *achievement)
+	a.Achievements = append(a.Achievements, achievement)
 	return achievement
 }
 

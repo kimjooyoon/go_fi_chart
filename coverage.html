@@ -1646,22 +1646,25 @@ type Asset struct {
         Type         Type
         Name         string
         Amount       Money
-        Performance  Performance
-        Goals        []Goal
-        Achievements []Achievement
+        Performance  *Performance
+        Goals        []*Goal
+        Achievements []*Achievement
         CreatedAt    time.Time
         UpdatedAt    time.Time
         events       []event.Event // 미발행 이벤트 저장
 }
 
+// GetID Entity 인터페이스 구현
 func (a *Asset) GetID() string <span class="cov8" title="1">{
         return a.ID
 }</span>
 
+// GetCreatedAt Entity 인터페이스 구현
 func (a *Asset) GetCreatedAt() time.Time <span class="cov8" title="1">{
         return a.CreatedAt
 }</span>
 
+// GetUpdatedAt Entity 인터페이스 구현
 func (a *Asset) GetUpdatedAt() time.Time <span class="cov8" title="1">{
         return a.UpdatedAt
 }</span>
@@ -1692,13 +1695,13 @@ func NewAsset(userID string, assetType Type, name string, amount float64, curren
                 Type:   assetType,
                 Name:   name,
                 Amount: money,
-                Performance: Performance{
+                Performance: &amp;Performance{
                         StartValue:     money,
                         CurrentValue:   money,
                         LastUpdateTime: now,
                 },
-                Goals:        make([]Goal, 0),
-                Achievements: make([]Achievement, 0),
+                Goals:        make([]*Goal, 0),
+                Achievements: make([]*Achievement, 0),
                 CreatedAt:    now,
                 UpdatedAt:    now,
         }, nil</span>
@@ -1717,7 +1720,7 @@ func (a *Asset) AddGoal(goalType GoalType, target Money, deadline time.Time) *Go
                 CreatedAt: now,
                 UpdatedAt: now,
         }
-        a.Goals = append(a.Goals, *goal)
+        a.Goals = append(a.Goals, goal)
         return goal
 }</span>
 
@@ -1745,7 +1748,7 @@ func (a *Asset) AddAchievement(achievementType AchievementType, conditions []Con
                 CreatedAt:  now,
                 UpdatedAt:  now,
         }
-        a.Achievements = append(a.Achievements, *achievement)
+        a.Achievements = append(a.Achievements, achievement)
         return achievement
 }</span>
 
