@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aske/go_fi_chart/internal/domain"
-	"github.com/aske/go_fi_chart/services/monitoring/internal/events"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,11 +34,11 @@ func (p *mockPublisher) Publish(_ context.Context, event domain.Event) error {
 	return nil
 }
 
-func (p *mockPublisher) Subscribe(_ events.Handler) error {
+func (p *mockPublisher) Subscribe(_ domain.Handler) error {
 	return nil
 }
 
-func (p *mockPublisher) Unsubscribe(_ events.Handler) error {
+func (p *mockPublisher) Unsubscribe(_ domain.Handler) error {
 	return nil
 }
 
@@ -84,7 +83,7 @@ func Test_SimpleNotifier_should_notify_handlers_and_publish_event(t *testing.T) 
 	assert.Equal(t, alert.Message, handler.alerts[0].Message)
 
 	assert.Len(t, publisher.events, 1)
-	assert.Equal(t, events.TypeAlertTriggered, publisher.events[0].EventType())
+	assert.Equal(t, domain.TypeAlertTriggered, publisher.events[0].EventType())
 	assert.Equal(t, alert.Source, publisher.events[0].Source())
 }
 

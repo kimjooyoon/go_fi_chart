@@ -6,23 +6,46 @@ import (
 	"time"
 
 	"github.com/aske/go_fi_chart/internal/domain"
-	"github.com/aske/go_fi_chart/services/monitoring/internal/metrics"
 )
 
-// MetricPayload 메트릭 수집 이벤트의 페이로드입니다.
-type MetricPayload struct {
-	Metrics []metrics.Metric `json:"metrics"`
+// BaseEvent 기본 이벤트 구현체입니다.
+type BaseEvent struct {
+	Type string
+	Time time.Time
+	Data interface{}
+	Src  string
+	Meta map[string]string
+}
+
+func (e *BaseEvent) EventType() string {
+	return e.Type
+}
+
+func (e *BaseEvent) Timestamp() time.Time {
+	return e.Time
+}
+
+func (e *BaseEvent) Payload() interface{} {
+	return e.Data
+}
+
+func (e *BaseEvent) Source() string {
+	return e.Src
+}
+
+func (e *BaseEvent) Metadata() map[string]string {
+	return e.Meta
 }
 
 // MonitoringEvent 모니터링 시스템의 이벤트입니다.
 type MonitoringEvent struct {
-	domain.BaseEvent
+	BaseEvent
 }
 
 // NewMonitoringEvent 새로운 모니터링 이벤트를 생성합니다.
 func NewMonitoringEvent(eventType string, source string, payload interface{}, metadata map[string]string) domain.Event {
 	return &MonitoringEvent{
-		BaseEvent: domain.BaseEvent{
+		BaseEvent: BaseEvent{
 			Type: eventType,
 			Time: time.Now(),
 			Data: payload,
@@ -32,28 +55,16 @@ func NewMonitoringEvent(eventType string, source string, payload interface{}, me
 	}
 }
 
-// Handler 이벤트를 처리하는 핸들러입니다.
-type Handler interface {
-	Handle(ctx context.Context, event domain.Event) error
-}
-
-// Publisher 이벤트를 발행하는 인터페이스입니다.
-type Publisher interface {
-	Publish(ctx context.Context, event domain.Event) error
-	Subscribe(handler Handler) error
-	Unsubscribe(handler Handler) error
-}
-
 // SimplePublisher 기본적인 이벤트 발행자 구현체입니다.
 type SimplePublisher struct {
 	mu       sync.RWMutex
-	handlers []Handler
+	handlers []domain.Handler
 }
 
 // NewSimplePublisher 새로운 SimplePublisher를 생성합니다.
 func NewSimplePublisher() *SimplePublisher {
 	return &SimplePublisher{
-		handlers: make([]Handler, 0),
+		handlers: make([]domain.Handler, 0),
 	}
 }
 
@@ -72,7 +83,7 @@ func (p *SimplePublisher) Publish(ctx context.Context, event domain.Event) error
 }
 
 // Subscribe 이벤트 핸들러를 등록합니다.
-func (p *SimplePublisher) Subscribe(handler Handler) error {
+func (p *SimplePublisher) Subscribe(handler domain.Handler) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -81,7 +92,7 @@ func (p *SimplePublisher) Subscribe(handler Handler) error {
 }
 
 // Unsubscribe 이벤트 핸들러를 제거합니다.
-func (p *SimplePublisher) Unsubscribe(handler Handler) error {
+func (p *SimplePublisher) Unsubscribe(handler domain.Handler) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -93,9 +104,3 @@ func (p *SimplePublisher) Unsubscribe(handler Handler) error {
 	}
 	return nil
 }
-
-// 이벤트 타입 상수
-const (
-	TypeMetricCollected = "METRIC_COLLECTED"
-	TypeAlertTriggered  = "ALERT_TRIGGERED"
-)

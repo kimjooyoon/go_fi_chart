@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aske/go_fi_chart/internal/domain"
-	"github.com/aske/go_fi_chart/services/monitoring/internal/events"
 )
 
 // AlertLevel 알림의 심각도를 나타냅니다.
@@ -37,12 +36,12 @@ type Notifier interface {
 // SimpleNotifier 기본적인 알림 처리자 구현체입니다.
 type SimpleNotifier struct {
 	mu        sync.RWMutex
-	publisher events.Publisher
+	publisher domain.Publisher
 	handlers  []Notifier
 }
 
 // NewSimpleNotifier 새로운 SimpleNotifier를 생성합니다.
-func NewSimpleNotifier(publisher events.Publisher) *SimpleNotifier {
+func NewSimpleNotifier(publisher domain.Publisher) *SimpleNotifier {
 	return &SimpleNotifier{
 		publisher: publisher,
 		handlers:  make([]Notifier, 0),
@@ -82,8 +81,8 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error {
 	}
 
 	// 알림 이벤트 발행
-	event := events.NewMonitoringEvent(
-		events.TypeAlertTriggered,
+	event := domain.NewMonitoringEvent(
+		domain.TypeAlertTriggered,
 		alert.Source,
 		alert,
 		alert.Metadata,
