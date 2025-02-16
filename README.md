@@ -1,46 +1,100 @@
 # Go Fi Chart
 
-금융 데이터 분석 및 차트 시각화 서비스
+금융 데이터 분석 및 시각화 플랫폼
 
-## 개요
+## 프로젝트 목표
 
-이 프로젝트는 금융 데이터를 수집, 분석하고 차트로 시각화하는 서비스를 제공합니다.
+Go Fi Chart는 다음과 같은 목표를 가진 금융 데이터 플랫폼입니다:
 
-## 기능
+1. **데이터 통합**
+  - 다양한 소스의 금융 데이터 수집
+  - 실시간 데이터 처리
+  - 데이터 정규화 및 검증
 
-- 금융 데이터 수집 및 저장
-- 데이터 분석 및 처리
-- 차트 시각화
-- 모니터링 시스템
+2. **분석 자동화**
+  - 자동화된 데이터 분석
+  - 패턴 인식 및 예측
+  - 커스텀 분석 파이프라인
+
+3. **시각화 도구**
+  - 실시간 차트 생성
+  - 대화형 데이터 탐색
+  - 맞춤형 대시보드
+
+## 핵심 기능
+
+### 1. 데이터 파이프라인
+
+- 실시간 데이터 수집
+- ETL 프로세스 자동화
+- 데이터 품질 관리
+
+### 2. 분석 엔진
+
+- 시계열 데이터 분석
+- 포트폴리오 최적화
+- 리스크 분석
+
+### 3. 시각화 도구
+
+- 실시간 차트 렌더링
+- 대화형 데이터 탐색
+- 맞춤형 대시보드
+
+### 4. [모니터링 시스템](docs/monitoring/README.md)
+
+- [메트릭 수집](docs/monitoring/METRICS.md)
+- [알림 관리](docs/monitoring/ALERTS.md)
+- [상태 모니터링](docs/monitoring/HEALTH.md)
 
 ## 아키텍처
 
-프로젝트는 다음과 같은 주요 컴포넌트로 구성됩니다:
+프로젝트는 도메인 주도 설계(DDD)와 이벤트 기반 아키텍처를 채택했습니다:
 
 ### 도메인 레이어
 
-- 자산 관리 (`internal/domain/asset`)
-- 이벤트 시스템 (`internal/domain/event`)
-- 게이미피케이션 (`internal/domain/gamification`)
+- **자산 관리** (`internal/domain/asset`)
+  - 자산 모델링
+  - 포트폴리오 관리
+  - 거래 처리
+- **이벤트 시스템** (`internal/domain/event`)
+  - 이벤트 정의
+  - 이벤트 처리
+  - 이벤트 저장
+- **게이미피케이션** (`internal/domain/gamification`)
+  - 사용자 참여 유도
+  - 보상 시스템
+  - 진행 상황 추적
 
 ### 서비스 레이어
 
-- 모니터링 서비스 (`services/monitoring`)
-    - [메트릭 수집 시스템](docs/monitoring/METRICS.md)
-    - 알림 시스템
-    - 상태 체크
+- **모니터링 서비스** (`services/monitoring`)
+  - 시스템 상태 관리
+  - 성능 메트릭 수집
+  - 알림 처리
 
 ### 인프라스트럭처 레이어
 
-- 이벤트 저장소 (`internal/infrastructure/events`)
-- API 서버 (`internal/api`)
-- 설정 관리 (`internal/config`)
+- **이벤트 저장소** (`internal/infrastructure/events`)
+- **API 서버** (`internal/api`)
+- **설정 관리** (`internal/config`)
 
-## 설치 및 실행
+## 시작하기
 
+### 필수 조건
+
+- Go 1.21 이상
+- Make
+- Docker (선택사항)
+
+### 설치
 ```bash
+# 저장소 클론
+git clone https://github.com/username/go_fi_chart.git
+cd go_fi_chart
+
 # 의존성 설치
-go mod download
+make init
 
 # 테스트 실행
 make test
@@ -51,17 +105,7 @@ make run
 
 ## 개발 가이드
 
-### 테스트
-
-```bash
-# 전체 테스트
-make test
-
-# 특정 서비스 테스트
-make test-monitoring
-```
-
-### 린트
+### 코드 품질
 
 ```bash
 # 전체 린트
@@ -71,22 +115,41 @@ make lint
 make lint-monitoring
 ```
 
-### 보안 검사
-
+### 테스트
 ```bash
-# 전체 보안 검사
-make security
+# 전체 테스트
+make test
 
-# 특정 서비스 보안 검사
-make security-monitoring
+# 특정 서비스 테스트
+make test-monitoring
+
+# 커버리지 리포트
+make coverage
+```
+
+### 보안
+```bash
+# 보안 검사
+make security
 ```
 
 ## 문서
 
-- [메트릭 수집 시스템](docs/monitoring/METRICS.md)
+- [모니터링 시스템](docs/monitoring/README.md)
+  - [메트릭 수집](docs/monitoring/METRICS.md)
+  - [알림 관리](docs/monitoring/ALERTS.md)
+  - [상태 체크](docs/monitoring/HEALTH.md)
 - [이벤트 스토밍](docs/event-storming/README.md)
-- [완료된 작업](docs/DONE.md)
-- [할 일](docs/TODO.md)
+- [작업 현황](docs/DONE.md)
+- [향후 계획](docs/TODO.md)
+
+## 기여하기
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 라이선스
 

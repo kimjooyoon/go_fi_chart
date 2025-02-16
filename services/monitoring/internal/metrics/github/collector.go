@@ -28,8 +28,8 @@ func NewCollector(publisher domain.Publisher) *Collector {
 func (c *Collector) AddActionStatusMetric(name string, status ActionStatus) error {
 	metric := NewActionMetric(name, status, 0)
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.metrics = append(c.metrics, metric)
-	c.mu.Unlock()
 	return nil
 }
 
@@ -37,8 +37,8 @@ func (c *Collector) AddActionStatusMetric(name string, status ActionStatus) erro
 func (c *Collector) AddActionDurationMetric(name string, duration time.Duration) error {
 	metric := NewActionMetric(name, ActionStatusSuccess, duration)
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.metrics = append(c.metrics, metric)
-	c.mu.Unlock()
 	return nil
 }
 
@@ -64,4 +64,11 @@ func (c *Collector) Collect(ctx context.Context) ([]metrics.Metric, error) {
 
 	c.metrics = c.metrics[:0]
 	return result, nil
+}
+
+// Reset 수집된 메트릭을 초기화합니다.
+func (c *Collector) Reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.metrics = c.metrics[:0]
 }
