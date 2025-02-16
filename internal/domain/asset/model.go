@@ -1,18 +1,114 @@
 package asset
 
 import (
+	"fmt"
 	"time"
 )
 
+// Money 화폐 값을 나타냅니다.
+type Money struct {
+	Amount   float64
+	Currency string
+}
+
+// Performance 자산의 성과를 나타냅니다.
+type Performance struct {
+	StartValue     Money
+	CurrentValue   Money
+	GrowthRate     float64
+	RiskScore      float64
+	LastUpdateTime time.Time
+}
+
+// Goal 재무 목표를 나타냅니다.
+type Goal struct {
+	ID        string
+	Type      GoalType
+	Target    Money
+	Deadline  time.Time
+	Progress  float64
+	Rewards   []Reward
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// GoalType 목표의 유형을 나타냅니다.
+type GoalType string
+
+const (
+	GoalTypeSaving    GoalType = "SAVING"
+	GoalTypeInvesting GoalType = "INVESTING"
+	GoalTypeDebtFree  GoalType = "DEBT_FREE"
+)
+
+// Achievement 업적을 나타냅니다.
+type Achievement struct {
+	ID         string
+	Type       AchievementType
+	Progress   float64
+	Conditions []Condition
+	Rewards    []Reward
+	UnlockedAt *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// AchievementType 업적의 유형을 나타냅니다.
+type AchievementType string
+
+const (
+	AchievementTypeSaving    AchievementType = "SAVING_MASTER"
+	AchievementTypeInvesting AchievementType = "INVESTING_GURU"
+	AchievementTypeCommunity AchievementType = "COMMUNITY_STAR"
+)
+
+// Condition 업적 달성 조건을 나타냅니다.
+type Condition struct {
+	Type      ConditionType
+	Target    interface{}
+	Current   interface{}
+	Completed bool
+}
+
+// ConditionType 조건의 유형을 나타냅니다.
+type ConditionType string
+
+const (
+	ConditionTypeAmount      ConditionType = "AMOUNT"
+	ConditionTypeDuration    ConditionType = "DURATION"
+	ConditionTypeStreak      ConditionType = "STREAK"
+	ConditionTypeInteraction ConditionType = "INTERACTION"
+)
+
+// Reward 보상을 나타냅니다.
+type Reward struct {
+	Type    RewardType
+	Value   interface{}
+	Claimed bool
+	ClaimBy time.Time
+}
+
+// RewardType 보상의 유형을 나타냅니다.
+type RewardType string
+
+const (
+	RewardTypeBadge   RewardType = "BADGE"
+	RewardTypeTitle   RewardType = "TITLE"
+	RewardTypeFeature RewardType = "FEATURE"
+)
+
+// Asset 자산을 나타냅니다.
 type Asset struct {
 	ID           string
 	UserID       string
 	Type         Type
 	Name         string
-	Amount       float64
+	Amount       Money
+	Performance  Performance
+	Goals        []Goal
+	Achievements []Achievement
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
-	Transactions []Transaction
 }
 
 func (a *Asset) GetID() string {
@@ -27,6 +123,7 @@ func (a *Asset) GetUpdatedAt() time.Time {
 	return a.UpdatedAt
 }
 
+// Type 자산의 유형을 나타냅니다.
 type Type string
 
 const (
@@ -37,6 +134,113 @@ const (
 	Crypto     Type = "CRYPTO"
 )
 
+// NewAsset 새로운 자산을 생성합니다.
+func NewAsset(userID string, assetType Type, name string, amount float64, currency string) *Asset {
+	now := time.Now()
+	return &Asset{
+		ID:     generateID(),
+		UserID: userID,
+		Type:   assetType,
+		Name:   name,
+		Amount: Money{
+			Amount:   amount,
+			Currency: currency,
+		},
+		Performance: Performance{
+			StartValue: Money{
+				Amount:   amount,
+				Currency: currency,
+			},
+			CurrentValue: Money{
+				Amount:   amount,
+				Currency: currency,
+			},
+			LastUpdateTime: now,
+		},
+		Goals:        make([]Goal, 0),
+		Achievements: make([]Achievement, 0),
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+}
+
+// AddGoal 자산에 새로운 목표를 추가합니다.
+func (a *Asset) AddGoal(goalType GoalType, target Money, deadline time.Time) *Goal {
+	now := time.Now()
+	goal := &Goal{
+		ID:        generateID(),
+		Type:      goalType,
+		Target:    target,
+		Deadline:  deadline,
+		Progress:  0,
+		Rewards:   make([]Reward, 0),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	a.Goals = append(a.Goals, *goal)
+	return goal
+}
+
+// UpdateProgress 목표의 진행률을 업데이트합니다.
+func (g *Goal) UpdateProgress(current Money) {
+	g.Progress = (current.Amount / g.Target.Amount) * 100
+	g.UpdatedAt = time.Now()
+}
+
+// IsAchieved 목표가 달성되었는지 확인합니다.
+func (g *Goal) IsAchieved() bool {
+	return g.Progress >= 100
+}
+
+// AddAchievement 자산에 새로운 업적을 추가합니다.
+func (a *Asset) AddAchievement(achievementType AchievementType, conditions []Condition) *Achievement {
+	now := time.Now()
+	achievement := &Achievement{
+		ID:         generateID(),
+		Type:       achievementType,
+		Progress:   0,
+		Conditions: conditions,
+		Rewards:    make([]Reward, 0),
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+	a.Achievements = append(a.Achievements, *achievement)
+	return achievement
+}
+
+// UpdateAchievementProgress 업적의 진행률을 업데이트합니다.
+func (a *Achievement) UpdateProgress() {
+	var completed int
+	for _, condition := range a.Conditions {
+		if condition.Completed {
+			completed++
+		}
+	}
+	a.Progress = float64(completed) / float64(len(a.Conditions)) * 100
+
+	if a.Progress >= 100 && a.UnlockedAt == nil {
+		now := time.Now()
+		a.UnlockedAt = &now
+	}
+
+	a.UpdatedAt = time.Now()
+}
+
+// IsUnlocked 업적이 해금되었는지 확인합니다.
+func (a *Achievement) IsUnlocked() bool {
+	return a.UnlockedAt != nil
+}
+
+// TransactionType 거래의 유형을 나타냅니다.
+type TransactionType string
+
+const (
+	Income   TransactionType = "INCOME"
+	Expense  TransactionType = "EXPENSE"
+	Transfer TransactionType = "TRANSFER"
+)
+
+// Transaction 거래 내역을 나타냅니다.
 type Transaction struct {
 	ID          string
 	AssetID     string
@@ -60,13 +264,20 @@ func (t *Transaction) GetUpdatedAt() time.Time {
 	return t.Date
 }
 
-type TransactionType string
-
-const (
-	Income   TransactionType = "INCOME"
-	Expense  TransactionType = "EXPENSE"
-	Transfer TransactionType = "TRANSFER"
-)
+// NewTransaction 새로운 거래 내역을 생성합니다.
+func NewTransaction(assetID string, txType TransactionType, amount float64, category string, description string) *Transaction {
+	now := time.Now()
+	return &Transaction{
+		ID:          generateID(),
+		AssetID:     assetID,
+		Type:        txType,
+		Amount:      amount,
+		Category:    category,
+		Description: description,
+		Date:        now,
+		CreatedAt:   now,
+	}
+}
 
 type Portfolio struct {
 	ID        string
@@ -94,33 +305,6 @@ type PortfolioAsset struct {
 	Weight  float64
 }
 
-func NewAsset(userID string, assetType Type, name string, amount float64) *Asset {
-	now := time.Now()
-	return &Asset{
-		ID:        generateID(),
-		UserID:    userID,
-		Type:      assetType,
-		Name:      name,
-		Amount:    amount,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-}
-
-func NewTransaction(assetID string, transactionType TransactionType, amount float64, category string, description string) *Transaction {
-	now := time.Now()
-	return &Transaction{
-		ID:          generateID(),
-		AssetID:     assetID,
-		Type:        transactionType,
-		Amount:      amount,
-		Category:    category,
-		Description: description,
-		Date:        now,
-		CreatedAt:   now,
-	}
-}
-
 func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio {
 	now := time.Now()
 	return &Portfolio{
@@ -130,4 +314,38 @@ func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
+}
+
+// ProcessTransaction 거래를 처리하고 자산 금액을 업데이트합니다.
+func (a *Asset) ProcessTransaction(tx *Transaction) error {
+	switch tx.Type {
+	case Income:
+		a.Amount.Amount += tx.Amount
+	case Expense:
+		if a.Amount.Amount < tx.Amount {
+			return fmt.Errorf("잔액이 부족합니다")
+		}
+		a.Amount.Amount -= tx.Amount
+	case Transfer:
+		// 이체는 별도 처리 필요
+		return nil
+	default:
+		return fmt.Errorf("알 수 없는 거래 유형: %s", tx.Type)
+	}
+
+	a.UpdatedAt = time.Now()
+	return nil
+}
+
+// ValidateTransaction 거래가 유효한지 검증합니다.
+func (a *Asset) ValidateTransaction(tx *Transaction) error {
+	if tx.Amount <= 0 {
+		return fmt.Errorf("거래 금액은 0보다 커야 합니다")
+	}
+
+	if tx.Type == Expense && a.Amount.Amount < tx.Amount {
+		return fmt.Errorf("잔액이 부족합니다")
+	}
+
+	return nil
 }

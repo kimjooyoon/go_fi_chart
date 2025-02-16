@@ -13,16 +13,17 @@ func Test_NewAsset_should_create_asset_with_valid_data(t *testing.T) {
 	assetType := Cash
 	name := "현금 자산"
 	amount := 1000000.0
+	currency := "KRW"
 
 	// When
-	asset := NewAsset(userID, assetType, name, amount)
+	asset := NewAsset(userID, assetType, name, amount, currency)
 
 	// Then
 	assert.NotEmpty(t, asset.ID)
 	assert.Equal(t, userID, asset.UserID)
 	assert.Equal(t, assetType, asset.Type)
 	assert.Equal(t, name, asset.Name)
-	assert.Equal(t, amount, asset.Amount)
+	assert.Equal(t, Money{Amount: amount, Currency: currency}, asset.Amount)
 	assert.NotZero(t, asset.CreatedAt)
 	assert.NotZero(t, asset.UpdatedAt)
 	assert.Equal(t, asset.CreatedAt, asset.UpdatedAt)

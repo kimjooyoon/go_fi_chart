@@ -145,14 +145,15 @@ func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amoun
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	asset, exists := r.data[id]
-	if !exists {
+	asset, ok := r.data[id]
+	if !ok {
 		return domain.NewRepositoryError("UpdateAmount", fmt.Errorf("asset with ID %s not found", id))
 	}
 
-	asset.Amount = amount
+	asset.Amount = Money{Amount: amount, Currency: asset.Amount.Currency}
 	asset.UpdatedAt = time.Now()
 	r.data[id] = asset
+
 	return nil
 }
 

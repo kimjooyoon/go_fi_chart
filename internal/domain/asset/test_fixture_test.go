@@ -80,7 +80,7 @@ func Test_fixture_should_find_transactions_by_asset_id(t *testing.T) {
 	transactions := fixture.GetTransactionsByAssetID("asset-1")
 
 	// Then
-	assert.Len(t, transactions, 2)
+	assert.Len(t, transactions, 3)
 	for _, tx := range transactions {
 		assert.Equal(t, "asset-1", tx.AssetID)
 	}

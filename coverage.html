@@ -57,56 +57,68 @@
 				
 				<option value="file0">github.com/aske/go_fi_chart/cmd/server/main.go (0.0%)</option>
 
-                        <option value="file1">github.com/aske/go_fi_chart/internal/config/config.go (0.0%)</option>
+                        <option value="file1">github.com/aske/go_fi_chart/internal/api/handler.go (0.0%)</option>
 
-                        <option value="file2">github.com/aske/go_fi_chart/internal/di/container.go (0.0%)</option>
+                        <option value="file2">github.com/aske/go_fi_chart/internal/config/config.go (0.0%)</option>
 
-                        <option value="file3">github.com/aske/go_fi_chart/internal/domain/asset/id_generator.go
+                        <option value="file3">github.com/aske/go_fi_chart/internal/di/container.go (0.0%)</option>
+
+                        <option value="file4">github.com/aske/go_fi_chart/internal/domain/asset/id_generator.go
                                 (100.0%)
                         </option>
 
-                        <option value="file4">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go
+                        <option value="file5">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go
                                 (76.0%)
                         </option>
 
-                        <option value="file5">github.com/aske/go_fi_chart/internal/domain/asset/model.go (100.0%)
+                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (30.0%)
                         </option>
 
-                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go
+                        <option value="file7">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go
                                 (100.0%)
                         </option>
 
-                        <option value="file7">github.com/aske/go_fi_chart/internal/domain/error.go (0.0%)</option>
+                        <option value="file8">github.com/aske/go_fi_chart/internal/domain/error.go (0.0%)</option>
 
-                        <option value="file8">github.com/aske/go_fi_chart/internal/domain/event.go (0.0%)</option>
+                        <option value="file9">github.com/aske/go_fi_chart/internal/domain/event.go (0.0%)</option>
 
-                        <option value="file9">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
+                        <option value="file10">
+                                github.com/aske/go_fi_chart/internal/domain/gamification/memory_repository.go (78.9%)
+                        </option>
 
-                        <option value="file10">github.com/aske/go_fi_chart/internal/infrastructure/events/event.go
+                        <option value="file11">github.com/aske/go_fi_chart/internal/domain/gamification/model.go
+                                (87.8%)
+                        </option>
+
+                        <option value="file12">github.com/aske/go_fi_chart/internal/domain/repository.go (0.0%)</option>
+
+                        <option value="file13">github.com/aske/go_fi_chart/internal/domain/utils.go (0.0%)</option>
+
+                        <option value="file14">github.com/aske/go_fi_chart/internal/infrastructure/events/event.go
                                 (0.0%)
                         </option>
 
-                        <option value="file11">github.com/aske/go_fi_chart/metrics/github/collector.go (0.0%)</option>
+                        <option value="file15">github.com/aske/go_fi_chart/metrics/github/collector.go (0.0%)</option>
 
-                        <option value="file12">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
+                        <option value="file16">github.com/aske/go_fi_chart/services/monitoring/internal/alerts/alert.go
                                 (89.5%)
                         </option>
 
-                        <option value="file13">
+                        <option value="file17">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/exporters/prometheus/exporter.go
                                 (93.5%)
                         </option>
 
-                        <option value="file14">
+                        <option value="file18">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/collector.go (94.1%)
                         </option>
 
-                        <option value="file15">
+                        <option value="file19">
                                 github.com/aske/go_fi_chart/services/monitoring/internal/metrics/github/collector.go
                                 (90.5%)
                         </option>
 
-                        <option value="file16">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
+                        <option value="file20">github.com/aske/go_fi_chart/services/monitoring/pkg/health/checker.go
                                 (100.0%)
                         </option>
 
@@ -125,35 +137,527 @@
 		<pre class="file" id="file0" style="display: none">package main
 
 import (
+        "context"
+        "fmt"
         "log"
         "net/http"
+        "os"
+        "os/signal"
+        "syscall"
         "time"
+
+        "github.com/aske/go_fi_chart/internal/api"
+        "github.com/aske/go_fi_chart/internal/config"
+        "github.com/aske/go_fi_chart/internal/domain/asset"
+        "github.com/aske/go_fi_chart/internal/domain/gamification"
+        "github.com/go-chi/chi/v5"
+        "github.com/go-chi/chi/v5/middleware"
 )
 
 func main() <span class="cov0" title="0">{
         log.Println("FIN-RPG 서버 시작 중...")
 
-        // TODO: 의존성 주입 설정
-        // TODO: 라우터 설정
-        // TODO: 미들웨어 설정
-        // TODO: 데이터베이스 연결
+        // 설정 로드
+        cfg := config.NewDefaultConfig()
 
-        srv := &amp;http.Server{
-                Addr:              ":8080",
-                ReadTimeout:       5 * time.Second,
-                WriteTimeout:      10 * time.Second,
-                IdleTimeout:       120 * time.Second,
+        // 저장소 생성
+        assetRepo := asset.NewMemoryAssetRepository()
+        transactionRepo := asset.NewMemoryTransactionRepository()
+        portfolioRepo := asset.NewMemoryPortfolioRepository()
+        gamificationRepo := gamification.NewMemoryRepository()
+
+        // API 핸들러 생성
+        apiHandler := api.NewHandler(assetRepo, transactionRepo, portfolioRepo, gamificationRepo)
+
+        // 라우터 설정
+        r := chi.NewRouter()
+        r.Use(middleware.Logger)
+        r.Use(middleware.Recoverer)
+        r.Use(middleware.RequestID)
+        r.Use(middleware.RealIP)
+        r.Use(middleware.Timeout(60 * time.Second))
+
+        // 헬스 체크
+        r.Get("/health", func(w http.ResponseWriter, _ *http.Request) </span><span class="cov0" title="0">{
+                w.WriteHeader(http.StatusOK)
+                if _, err := w.Write([]byte("OK")); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("헬스 체크 응답 작성 실패: %v", err)
+                }</span>
+        })
+
+        // API 라우터 그룹
+        <span class="cov0" title="0">r.Route("/api", func(r chi.Router) </span><span class="cov0" title="0">{
+                apiHandler.RegisterRoutes(r)
+        }</span>)
+
+        // 서버 설정
+        <span class="cov0" title="0">srv := &amp;http.Server{
+                Addr:              fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
+                Handler:           r,
+                ReadTimeout:       cfg.Server.ReadTimeout,
+                WriteTimeout:      cfg.Server.WriteTimeout,
+                IdleTimeout:       cfg.Server.IdleTimeout,
                 ReadHeaderTimeout: 2 * time.Second,
         }
 
-        log.Println("서버가 시작되었습니다. :8080 포트에서 대기 중...")
-        if err := srv.ListenAndServe(); err != nil </span><span class="cov0" title="0">{
-                log.Fatalf("서버 시작 실패: %v", err)
+        // 종료 시그널 처리
+        done := make(chan os.Signal, 1)
+        signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+        go func() </span><span class="cov0" title="0">{
+                log.Printf("서버가 시작되었습니다. %s에서 대기 중...", srv.Addr)
+                if err := srv.ListenAndServe(); err != nil &amp;&amp; err != http.ErrServerClosed </span><span
+                        class="cov0" title="0">{
+                        log.Fatalf("서버 시작 실패: %v", err)
+                }</span>
+        }()
+
+        <span class="cov0" title="0">&lt;-done
+        log.Println("서버 종료 중...")
+
+        ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
+        defer cancel()
+
+        if err := srv.Shutdown(ctx); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("서버 종료 실패: %v", err)
         }</span>
+
+        <span class="cov0" title="0">log.Println("서버가 정상적으로 종료되었습니다.")</span>
 }
 </pre>
 
-                <pre class="file" id="file1" style="display: none">package config
+                <pre class="file" id="file1" style="display: none">package api
+
+import (
+        "encoding/json"
+        "net/http"
+        "time"
+
+        "github.com/aske/go_fi_chart/internal/domain/asset"
+        "github.com/aske/go_fi_chart/internal/domain/gamification"
+        "github.com/go-chi/chi/v5"
+)
+
+// Handler API 핸들러입니다.
+type Handler struct {
+        assetRepo        asset.Repository
+        transactionRepo  asset.TransactionRepository
+        portfolioRepo    asset.PortfolioRepository
+        gamificationRepo gamification.Repository
+}
+
+// NewHandler 새로운 API 핸들러를 생성합니다.
+func NewHandler(
+        assetRepo asset.Repository,
+        transactionRepo asset.TransactionRepository,
+        portfolioRepo asset.PortfolioRepository,
+        gamificationRepo gamification.Repository,
+) *Handler <span class="cov0" title="0">{
+        return &amp;Handler{
+                assetRepo:        assetRepo,
+                transactionRepo:  transactionRepo,
+                portfolioRepo:    portfolioRepo,
+                gamificationRepo: gamificationRepo,
+        }
+}</span>
+
+// RegisterRoutes 라우터에 API 핸들러를 등록합니다.
+func (h *Handler) RegisterRoutes(r chi.Router) <span class="cov0" title="0">{
+        // 자산 관리 API
+        r.Route("/assets", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Get("/", h.ListAssets)
+                r.Post("/", h.CreateAsset)
+                r.Get("/{id}", h.GetAsset)
+                r.Put("/{id}", h.UpdateAsset)
+                r.Delete("/{id}", h.DeleteAsset)
+        }</span>)
+
+        // 거래 내역 API
+        <span class="cov0" title="0">r.Route("/transactions", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Get("/", h.ListTransactions)
+                r.Post("/", h.CreateTransaction)
+                r.Get("/{id}", h.GetTransaction)
+        }</span>)
+
+        // 포트폴리오 API
+        <span class="cov0" title="0">r.Route("/portfolios", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Get("/", h.GetPortfolio)
+                r.Put("/", h.UpdatePortfolio)
+        }</span>)
+
+        // 게임화 API
+        <span class="cov0" title="0">r.Route("/gamification", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Get("/profile", h.GetProfile)
+                r.Get("/badges", h.ListBadges)
+                r.Get("/streaks", h.ListStreaks)
+                r.Get("/stats", h.GetStats)
+        }</span>)
+}
+
+// 응답 헬퍼 함수
+func respondJSON(w http.ResponseWriter, status int, data interface{}) <span class="cov0" title="0">{
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(status)
+        if data != nil </span><span class="cov0" title="0">{
+                if err := json.NewEncoder(w).Encode(data); err != nil </span><span class="cov0" title="0">{
+                        http.Error(w, err.Error(), http.StatusInternalServerError)
+                }</span>
+        }
+}
+
+func respondError(w http.ResponseWriter, status int, message string) <span class="cov0" title="0">{
+        respondJSON(w, status, map[string]string{"error": message})
+}</span>
+
+// 요청/응답 구조체
+type CreateAssetRequest struct {
+        UserID   string  `json:"userId"`
+        Type     string  `json:"type"`
+        Name     string  `json:"name"`
+        Amount   float64 `json:"amount"`
+        Currency string  `json:"currency"`
+}
+
+type UpdateAssetRequest struct {
+        Name     string  `json:"name,omitempty"`
+        Amount   float64 `json:"amount,omitempty"`
+        Currency string  `json:"currency,omitempty"`
+}
+
+type AssetResponse struct {
+        ID        string    `json:"id"`
+        UserID    string    `json:"userId"`
+        Type      string    `json:"type"`
+        Name      string    `json:"name"`
+        Amount    float64   `json:"amount"`
+        Currency  string    `json:"currency"`
+        CreatedAt time.Time `json:"createdAt"`
+        UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (h *Handler) ListAssets(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        userID := r.URL.Query().Get("userId")
+        if userID == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "사용자 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">assets, err := h.assetRepo.FindByUserID(r.Context(), userID)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, "자산 목록 조회 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := make([]AssetResponse, len(assets))
+        for i, asset := range assets </span><span class="cov0" title="0">{
+                response[i] = AssetResponse{
+                        ID:        asset.ID,
+                        UserID:    asset.UserID,
+                        Type:      string(asset.Type),
+                        Name:      asset.Name,
+                        Amount:    asset.Amount.Amount,
+                        Currency:  asset.Amount.Currency,
+                        CreatedAt: asset.CreatedAt,
+                        UpdatedAt: asset.UpdatedAt,
+                }
+        }</span>
+
+        <span class="cov0" title="0">respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) CreateAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        var req CreateAssetRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "잘못된 요청 형식")
+                return
+        }</span>
+
+        <span class="cov0" title="0">asset := asset.NewAsset(req.UserID, asset.Type(req.Type), req.Name, req.Amount, req.Currency)
+        if err := h.assetRepo.Save(r.Context(), asset); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, "자산 생성 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := AssetResponse{
+                ID:        asset.ID,
+                UserID:    asset.UserID,
+                Type:      string(asset.Type),
+                Name:      asset.Name,
+                Amount:    asset.Amount.Amount,
+                Currency:  asset.Amount.Currency,
+                CreatedAt: asset.CreatedAt,
+                UpdatedAt: asset.UpdatedAt,
+        }
+
+        respondJSON(w, http.StatusCreated, response)</span>
+}
+
+func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        id := chi.URLParam(r, "id")
+        if id == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">asset, err := h.assetRepo.FindByID(r.Context(), id)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusNotFound, "자산을 찾을 수 없습니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := AssetResponse{
+                ID:        asset.ID,
+                UserID:    asset.UserID,
+                Type:      string(asset.Type),
+                Name:      asset.Name,
+                Amount:    asset.Amount.Amount,
+                Currency:  asset.Amount.Currency,
+                CreatedAt: asset.CreatedAt,
+                UpdatedAt: asset.UpdatedAt,
+        }
+
+        respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        id := chi.URLParam(r, "id")
+        if id == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">var req UpdateAssetRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "잘못된 요청 형식")
+                return
+        }</span>
+
+        <span class="cov0" title="0">asset, err := h.assetRepo.FindByID(r.Context(), id)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusNotFound, "자산을 찾을 수 없습니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if req.Name != "" </span><span class="cov0" title="0">{
+                asset.Name = req.Name
+        }</span>
+        <span class="cov0" title="0">if req.Amount != 0 </span><span class="cov0" title="0">{
+                asset.Amount.Amount = req.Amount
+        }</span>
+        <span class="cov0" title="0">if req.Currency != "" </span><span class="cov0" title="0">{
+                asset.Amount.Currency = req.Currency
+        }</span>
+        <span class="cov0" title="0">asset.UpdatedAt = time.Now()
+
+        if err := h.assetRepo.Update(r.Context(), asset); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, "자산 업데이트 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := AssetResponse{
+                ID:        asset.ID,
+                UserID:    asset.UserID,
+                Type:      string(asset.Type),
+                Name:      asset.Name,
+                Amount:    asset.Amount.Amount,
+                Currency:  asset.Amount.Currency,
+                CreatedAt: asset.CreatedAt,
+                UpdatedAt: asset.UpdatedAt,
+        }
+
+        respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        id := chi.URLParam(r, "id")
+        if id == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.assetRepo.Delete(r.Context(), id); err != nil </span><span class="cov0"
+                                                                                                            title="0">{
+                respondError(w, http.StatusInternalServerError, "자산 삭제 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">respondJSON(w, http.StatusNoContent, nil)</span>
+}
+
+// 거래 내역 요청/응답 구조체
+type CreateTransactionRequest struct {
+        AssetID     string  `json:"assetId"`
+        Type        string  `json:"type"`
+        Amount      float64 `json:"amount"`
+        Category    string  `json:"category"`
+        Description string  `json:"description"`
+}
+
+type TransactionResponse struct {
+        ID          string    `json:"id"`
+        AssetID     string    `json:"assetId"`
+        Type        string    `json:"type"`
+        Amount      float64   `json:"amount"`
+        Category    string    `json:"category"`
+        Description string    `json:"description"`
+        Date        time.Time `json:"date"`
+        CreatedAt   time.Time `json:"createdAt"`
+}
+
+func (h *Handler) ListTransactions(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        assetID := r.URL.Query().Get("assetId")
+        if assetID == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "자산 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">transactions, err := h.transactionRepo.FindByAssetID(r.Context(), assetID)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, "거래 내역 조회 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := make([]TransactionResponse, len(transactions))
+        for i, tx := range transactions </span><span class="cov0" title="0">{
+                response[i] = TransactionResponse{
+                        ID:          tx.ID,
+                        AssetID:     tx.AssetID,
+                        Type:        string(tx.Type),
+                        Amount:      tx.Amount,
+                        Category:    tx.Category,
+                        Description: tx.Description,
+                        Date:        tx.Date,
+                        CreatedAt:   tx.CreatedAt,
+                }
+        }</span>
+
+        <span class="cov0" title="0">respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        var req CreateTransactionRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "잘못된 요청 형식")
+                return
+        }</span>
+
+        // 자산 존재 여부 확인
+        <span class="cov0" title="0">targetAsset, err := h.assetRepo.FindByID(r.Context(), req.AssetID)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusNotFound, "자산을 찾을 수 없습니다")
+                return
+        }</span>
+
+        // 거래 생성
+        <span class="cov0" title="0">tx := asset.NewTransaction(
+                req.AssetID,
+                asset.TransactionType(req.Type),
+                req.Amount,
+                req.Category,
+                req.Description,
+        )
+
+        // 거래 유효성 검증
+        if err := targetAsset.ValidateTransaction(tx); err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, err.Error())
+                return
+        }</span>
+
+        // 거래 처리 및 자산 업데이트
+        <span class="cov0" title="0">if err := targetAsset.ProcessTransaction(tx); err != nil </span><span class="cov0"
+                                                                                                           title="0">{
+                respondError(w, http.StatusBadRequest, err.Error())
+                return
+        }</span>
+
+        // 트랜잭션 저장
+        <span class="cov0" title="0">if err := h.transactionRepo.Save(r.Context(), tx); err != nil </span><span
+                                class="cov0" title="0">{
+                respondError(w, http.StatusInternalServerError, "거래 생성 실패")
+                return
+        }</span>
+
+        // 자산 상태 저장
+        <span class="cov0" title="0">if err := h.assetRepo.Update(r.Context(), targetAsset); err != nil </span><span
+                                class="cov0" title="0">{
+                // 롤백 처리가 필요할 수 있음
+                respondError(w, http.StatusInternalServerError, "자산 상태 업데이트 실패")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := TransactionResponse{
+                ID:          tx.ID,
+                AssetID:     tx.AssetID,
+                Type:        string(tx.Type),
+                Amount:      tx.Amount,
+                Category:    tx.Category,
+                Description: tx.Description,
+                Date:        tx.Date,
+                CreatedAt:   tx.CreatedAt,
+        }
+
+        respondJSON(w, http.StatusCreated, response)</span>
+}
+
+func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        id := chi.URLParam(r, "id")
+        if id == "" </span><span class="cov0" title="0">{
+                respondError(w, http.StatusBadRequest, "거래 ID가 필요합니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">tx, err := h.transactionRepo.FindByID(r.Context(), id)
+        if err != nil </span><span class="cov0" title="0">{
+                respondError(w, http.StatusNotFound, "거래를 찾을 수 없습니다")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response := TransactionResponse{
+                ID:          tx.ID,
+                AssetID:     tx.AssetID,
+                Type:        string(tx.Type),
+                Amount:      tx.Amount,
+                Category:    tx.Category,
+                Description: tx.Description,
+                Date:        tx.Date,
+                CreatedAt:   tx.CreatedAt,
+        }
+
+        respondJSON(w, http.StatusOK, response)</span>
+}
+
+func (h *Handler) GetPortfolio(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
+        // TODO: 구현
+        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+}</span>
+
+func (h *Handler) UpdatePortfolio(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
+        // TODO: 구현
+        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+}</span>
+
+func (h *Handler) GetProfile(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
+        // TODO: 구현
+        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+}</span>
+
+func (h *Handler) ListBadges(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
+        // TODO: 구현
+        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+}</span>
+
+func (h *Handler) ListStreaks(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
+        // TODO: 구현
+        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+}</span>
+
+func (h *Handler) GetStats(w http.ResponseWriter, _ *http.Request) <span class="cov0" title="0">{
+        // TODO: 구현
+        respondError(w, http.StatusNotImplemented, "아직 구현되지 않았습니다")
+}</span>
+</pre>
+
+                <pre class="file" id="file2" style="display: none">package config
 
 import "time"
 
@@ -226,7 +730,7 @@ func NewDefaultConfig() *Config <span class="cov0" title="0">{
 }</span>
 </pre>
 
-                <pre class="file" id="file2" style="display: none">package di
+                <pre class="file" id="file3" style="display: none">package di
 
 import (
         "fmt"
@@ -317,7 +821,7 @@ func (c *SimpleContainer) Resolve(name string) (interface{}, error) <span class=
 }
 </pre>
 
-                <pre class="file" id="file3" style="display: none">package asset
+                <pre class="file" id="file4" style="display: none">package asset
 
 import (
         "github.com/google/uuid"
@@ -331,7 +835,7 @@ func generateID() string <span class="cov8" title="1">{
 }</span>
 </pre>
 
-                <pre class="file" id="file4" style="display: none">package asset
+                <pre class="file" id="file5" style="display: none">package asset
 
 import (
         "context"
@@ -481,14 +985,15 @@ func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amoun
         r.mutex.Lock()
         defer r.mutex.Unlock()
 
-        asset, exists := r.data[id]
-        if !exists </span><span class="cov0" title="0">{
+        asset, ok := r.data[id]
+        if !ok </span><span class="cov0" title="0">{
                 return domain.NewRepositoryError("UpdateAmount", fmt.Errorf("asset with ID %s not found", id))
         }</span>
 
-        <span class="cov8" title="1">asset.Amount = amount
+        <span class="cov8" title="1">asset.Amount = Money{Amount: amount, Currency: asset.Amount.Currency}
         asset.UpdatedAt = time.Now()
         r.data[id] = asset
+
         return nil</span>
 }
 
@@ -601,21 +1106,117 @@ func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, a
 }
 </pre>
 
-                <pre class="file" id="file5" style="display: none">package asset
+                <pre class="file" id="file6" style="display: none">package asset
 
 import (
+        "fmt"
         "time"
 )
 
+// Money 화폐 값을 나타냅니다.
+type Money struct {
+        Amount   float64
+        Currency string
+}
+
+// Performance 자산의 성과를 나타냅니다.
+type Performance struct {
+        StartValue     Money
+        CurrentValue   Money
+        GrowthRate     float64
+        RiskScore      float64
+        LastUpdateTime time.Time
+}
+
+// Goal 재무 목표를 나타냅니다.
+type Goal struct {
+        ID        string
+        Type      GoalType
+        Target    Money
+        Deadline  time.Time
+        Progress  float64
+        Rewards   []Reward
+        CreatedAt time.Time
+        UpdatedAt time.Time
+}
+
+// GoalType 목표의 유형을 나타냅니다.
+type GoalType string
+
+const (
+        GoalTypeSaving    GoalType = "SAVING"
+        GoalTypeInvesting GoalType = "INVESTING"
+        GoalTypeDebtFree  GoalType = "DEBT_FREE"
+)
+
+// Achievement 업적을 나타냅니다.
+type Achievement struct {
+        ID         string
+        Type       AchievementType
+        Progress   float64
+        Conditions []Condition
+        Rewards    []Reward
+        UnlockedAt *time.Time
+        CreatedAt  time.Time
+        UpdatedAt  time.Time
+}
+
+// AchievementType 업적의 유형을 나타냅니다.
+type AchievementType string
+
+const (
+        AchievementTypeSaving    AchievementType = "SAVING_MASTER"
+        AchievementTypeInvesting AchievementType = "INVESTING_GURU"
+        AchievementTypeCommunity AchievementType = "COMMUNITY_STAR"
+)
+
+// Condition 업적 달성 조건을 나타냅니다.
+type Condition struct {
+        Type      ConditionType
+        Target    interface{}
+        Current   interface{}
+        Completed bool
+}
+
+// ConditionType 조건의 유형을 나타냅니다.
+type ConditionType string
+
+const (
+        ConditionTypeAmount      ConditionType = "AMOUNT"
+        ConditionTypeDuration    ConditionType = "DURATION"
+        ConditionTypeStreak      ConditionType = "STREAK"
+        ConditionTypeInteraction ConditionType = "INTERACTION"
+)
+
+// Reward 보상을 나타냅니다.
+type Reward struct {
+        Type    RewardType
+        Value   interface{}
+        Claimed bool
+        ClaimBy time.Time
+}
+
+// RewardType 보상의 유형을 나타냅니다.
+type RewardType string
+
+const (
+        RewardTypeBadge   RewardType = "BADGE"
+        RewardTypeTitle   RewardType = "TITLE"
+        RewardTypeFeature RewardType = "FEATURE"
+)
+
+// Asset 자산을 나타냅니다.
 type Asset struct {
         ID           string
         UserID       string
         Type         Type
         Name         string
-        Amount       float64
+        Amount       Money
+        Performance  Performance
+        Goals        []Goal
+        Achievements []Achievement
         CreatedAt    time.Time
         UpdatedAt    time.Time
-        Transactions []Transaction
 }
 
 func (a *Asset) GetID() string <span class="cov8" title="1">{
@@ -630,6 +1231,7 @@ func (a *Asset) GetUpdatedAt() time.Time <span class="cov8" title="1">{
         return a.UpdatedAt
 }</span>
 
+// Type 자산의 유형을 나타냅니다.
 type Type string
 
 const (
@@ -640,6 +1242,115 @@ const (
         Crypto     Type = "CRYPTO"
 )
 
+// NewAsset 새로운 자산을 생성합니다.
+func NewAsset(userID string, assetType Type, name string, amount float64, currency string) *Asset <span class="cov8"
+                                                                                                        title="1">{
+        now := time.Now()
+        return &amp;Asset{
+                ID:     generateID(),
+                UserID: userID,
+                Type:   assetType,
+                Name:   name,
+                Amount: Money{
+                        Amount:   amount,
+                        Currency: currency,
+                },
+                Performance: Performance{
+                        StartValue: Money{
+                                Amount:   amount,
+                                Currency: currency,
+                        },
+                        CurrentValue: Money{
+                                Amount:   amount,
+                                Currency: currency,
+                        },
+                        LastUpdateTime: now,
+                },
+                Goals:        make([]Goal, 0),
+                Achievements: make([]Achievement, 0),
+                CreatedAt:    now,
+                UpdatedAt:    now,
+        }
+}</span>
+
+// AddGoal 자산에 새로운 목표를 추가합니다.
+func (a *Asset) AddGoal(goalType GoalType, target Money, deadline time.Time) *Goal <span class="cov0" title="0">{
+        now := time.Now()
+        goal := &amp;Goal{
+                ID:        generateID(),
+                Type:      goalType,
+                Target:    target,
+                Deadline:  deadline,
+                Progress:  0,
+                Rewards:   make([]Reward, 0),
+                CreatedAt: now,
+                UpdatedAt: now,
+        }
+        a.Goals = append(a.Goals, *goal)
+        return goal
+}</span>
+
+// UpdateProgress 목표의 진행률을 업데이트합니다.
+func (g *Goal) UpdateProgress(current Money) <span class="cov0" title="0">{
+        g.Progress = (current.Amount / g.Target.Amount) * 100
+        g.UpdatedAt = time.Now()
+}</span>
+
+// IsAchieved 목표가 달성되었는지 확인합니다.
+func (g *Goal) IsAchieved() bool <span class="cov0" title="0">{
+        return g.Progress &gt;= 100
+}</span>
+
+// AddAchievement 자산에 새로운 업적을 추가합니다.
+func (a *Asset) AddAchievement(achievementType AchievementType, conditions []Condition) *Achievement <span class="cov0"
+                                                                                                           title="0">{
+        now := time.Now()
+        achievement := &amp;Achievement{
+                ID:         generateID(),
+                Type:       achievementType,
+                Progress:   0,
+                Conditions: conditions,
+                Rewards:    make([]Reward, 0),
+                CreatedAt:  now,
+                UpdatedAt:  now,
+        }
+        a.Achievements = append(a.Achievements, *achievement)
+        return achievement
+}</span>
+
+// UpdateAchievementProgress 업적의 진행률을 업데이트합니다.
+func (a *Achievement) UpdateProgress() <span class="cov0" title="0">{
+        var completed int
+        for _, condition := range a.Conditions </span><span class="cov0" title="0">{
+                if condition.Completed </span><span class="cov0" title="0">{
+                        completed++
+                }</span>
+        }
+        <span class="cov0" title="0">a.Progress = float64(completed) / float64(len(a.Conditions)) * 100
+
+        if a.Progress &gt;= 100 &amp;&amp; a.UnlockedAt == nil </span><span class="cov0" title="0">{
+                now := time.Now()
+                a.UnlockedAt = &amp;now
+        }</span>
+
+        <span class="cov0" title="0">a.UpdatedAt = time.Now()</span>
+}
+
+// IsUnlocked 업적이 해금되었는지 확인합니다.
+func (a *Achievement) IsUnlocked() bool <span class="cov0" title="0">{
+        return a.UnlockedAt != nil
+}</span>
+
+// TransactionType 거래의 유형을 나타냅니다.
+type TransactionType string
+
+const (
+        Income   TransactionType = "INCOME"
+        Expense  TransactionType = "EXPENSE"
+        Transfer TransactionType = "TRANSFER"
+)
+
+// Transaction 거래 내역을 나타냅니다.
 type Transaction struct {
         ID          string
         AssetID     string
@@ -663,13 +1374,21 @@ func (t *Transaction) GetUpdatedAt() time.Time <span class="cov8" title="1">{
         return t.Date
 }</span>
 
-type TransactionType string
-
-const (
-        Income   TransactionType = "INCOME"
-        Expense  TransactionType = "EXPENSE"
-        Transfer TransactionType = "TRANSFER"
-)
+// NewTransaction 새로운 거래 내역을 생성합니다.
+func NewTransaction(assetID string, txType TransactionType, amount float64, category string, description string) *Transaction <span
+                                class="cov8" title="1">{
+        now := time.Now()
+        return &amp;Transaction{
+                ID:          generateID(),
+                AssetID:     assetID,
+                Type:        txType,
+                Amount:      amount,
+                Category:    category,
+                Description: description,
+                Date:        now,
+                CreatedAt:   now,
+        }
+}</span>
 
 type Portfolio struct {
         ID        string
@@ -697,34 +1416,6 @@ type PortfolioAsset struct {
         Weight  float64
 }
 
-func NewAsset(userID string, assetType Type, name string, amount float64) *Asset <span class="cov8" title="1">{
-        now := time.Now()
-        return &amp;Asset{
-                ID:        generateID(),
-                UserID:    userID,
-                Type:      assetType,
-                Name:      name,
-                Amount:    amount,
-                CreatedAt: now,
-                UpdatedAt: now,
-        }
-}</span>
-
-func NewTransaction(assetID string, transactionType TransactionType, amount float64, category string, description string) *Transaction <span
-                                class="cov8" title="1">{
-        now := time.Now()
-        return &amp;Transaction{
-                ID:          generateID(),
-                AssetID:     assetID,
-                Type:        transactionType,
-                Amount:      amount,
-                Category:    category,
-                Description: description,
-                Date:        now,
-                CreatedAt:   now,
-        }
-}</span>
-
 func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio <span class="cov8" title="1">{
         now := time.Now()
         return &amp;Portfolio{
@@ -735,9 +1426,44 @@ func NewPortfolio(userID string, assets []PortfolioAsset) *Portfolio <span class
                 UpdatedAt: now,
         }
 }</span>
+
+// ProcessTransaction 거래를 처리하고 자산 금액을 업데이트합니다.
+func (a *Asset) ProcessTransaction(tx *Transaction) error <span class="cov0" title="0">{
+        switch tx.Type </span>{
+        case Income:<span class="cov0" title="0">
+                a.Amount.Amount += tx.Amount</span>
+        case Expense:<span class="cov0" title="0">
+                if a.Amount.Amount &lt; tx.Amount </span><span class="cov0" title="0">{
+                        return fmt.Errorf("잔액이 부족합니다")
+                }</span>
+                <span class="cov0" title="0">a.Amount.Amount -= tx.Amount</span>
+        case Transfer:<span class="cov0" title="0">
+                // 이체는 별도 처리 필요
+                return nil</span>
+        default:<span class="cov0" title="0">
+                return fmt.Errorf("알 수 없는 거래 유형: %s", tx.Type)</span>
+        }
+
+        <span class="cov0" title="0">a.UpdatedAt = time.Now()
+        return nil</span>
+}
+
+// ValidateTransaction 거래가 유효한지 검증합니다.
+func (a *Asset) ValidateTransaction(tx *Transaction) error <span class="cov0" title="0">{
+        if tx.Amount &lt;= 0 </span><span class="cov0" title="0">{
+                return fmt.Errorf("거래 금액은 0보다 커야 합니다")
+        }</span>
+
+        <span class="cov0" title="0">if tx.Type == Expense &amp;&amp; a.Amount.Amount &lt; tx.Amount </span><span
+                                class="cov0" title="0">{
+                return fmt.Errorf("잔액이 부족합니다")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
 </pre>
 
-                <pre class="file" id="file6" style="display: none">package asset
+                <pre class="file" id="file7" style="display: none">package asset
 
 import (
         "time"
@@ -752,71 +1478,66 @@ type TestFixture struct {
 
 // NewTestFixture 새로운 테스트 픽스처를 생성합니다.
 func NewTestFixture() *TestFixture <span class="cov8" title="1">{
-        now := time.Now()
-        userID := "test-user-1"
-
-        // 자산 데이터 생성
         assets := []*Asset{
                 {
                         ID:        "asset-1",
-                        UserID:    userID,
+                        UserID:    "test-user-1",
                         Type:      Cash,
                         Name:      "현금 자산",
-                        Amount:    1000000,
-                        CreatedAt: now,
-                        UpdatedAt: now,
+                        Amount:    Money{Amount: 1000000.0, Currency: "KRW"},
+                        CreatedAt: time.Now(),
+                        UpdatedAt: time.Now(),
                 },
                 {
                         ID:        "asset-2",
-                        UserID:    userID,
+                        UserID:    "test-user-1",
                         Type:      Stock,
-                        Name:      "주식 투자",
-                        Amount:    5000000,
-                        CreatedAt: now,
-                        UpdatedAt: now,
+                        Name:      "주식 자산",
+                        Amount:    Money{Amount: 2000000.0, Currency: "KRW"},
+                        CreatedAt: time.Now(),
+                        UpdatedAt: time.Now(),
                 },
                 {
                         ID:        "asset-3",
-                        UserID:    userID,
-                        Type:      Bond,
-                        Name:      "채권 투자",
-                        Amount:    3000000,
-                        CreatedAt: now,
-                        UpdatedAt: now,
+                        UserID:    "test-user-1",
+                        Type:      RealEstate,
+                        Name:      "부동산 자산",
+                        Amount:    Money{Amount: 300000000.0, Currency: "KRW"},
+                        CreatedAt: time.Now(),
+                        UpdatedAt: time.Now(),
                 },
         }
 
-        // 거래 내역 데이터 생성
         transactions := []*Transaction{
                 {
                         ID:          "tx-1",
-                        AssetID:     "asset-1",
+                        AssetID:     assets[0].ID,
                         Type:        Income,
-                        Amount:      500000,
+                        Amount:      500000.0,
                         Category:    "급여",
                         Description: "3월 급여",
-                        Date:        now,
-                        CreatedAt:   now,
+                        Date:        time.Now(),
+                        CreatedAt:   time.Now(),
                 },
                 {
                         ID:          "tx-2",
-                        AssetID:     "asset-1",
+                        AssetID:     assets[0].ID,
                         Type:        Expense,
-                        Amount:      100000,
+                        Amount:      100000.0,
                         Category:    "식비",
                         Description: "3월 식비",
-                        Date:        now,
-                        CreatedAt:   now,
+                        Date:        time.Now(),
+                        CreatedAt:   time.Now(),
                 },
                 {
                         ID:          "tx-3",
-                        AssetID:     "asset-2",
+                        AssetID:     assets[0].ID,
                         Type:        Transfer,
-                        Amount:      1000000,
-                        Category:    "투자",
-                        Description: "주식 매수",
-                        Date:        now,
-                        CreatedAt:   now,
+                        Amount:      1000000.0,
+                        Category:    "이체",
+                        Description: "주식 계좌로 이체",
+                        Date:        time.Now(),
+                        CreatedAt:   time.Now(),
                 },
         }
 
@@ -824,7 +1545,7 @@ func NewTestFixture() *TestFixture <span class="cov8" title="1">{
         portfolios := []*Portfolio{
                 {
                         ID:     "portfolio-1",
-                        UserID: userID,
+                        UserID: "test-user-1",
                         Assets: []PortfolioAsset{
                                 {
                                         AssetID: "asset-1",
@@ -839,8 +1560,8 @@ func NewTestFixture() *TestFixture <span class="cov8" title="1">{
                                         Weight:  0.3, // 30%
                                 },
                         },
-                        CreatedAt: now,
-                        UpdatedAt: now,
+                        CreatedAt: time.Now(),
+                        UpdatedAt: time.Now(),
                 },
         }
 
@@ -914,7 +1635,7 @@ func (f *TestFixture) GetPortfolioByUserID(userID string) *Portfolio <span class
 }
 </pre>
 
-                <pre class="file" id="file7" style="display: none">package domain
+                <pre class="file" id="file8" style="display: none">package domain
 
 import "fmt"
 
@@ -966,7 +1687,7 @@ const (
 )
 </pre>
 
-                <pre class="file" id="file8" style="display: none">package domain
+                <pre class="file" id="file9" style="display: none">package domain
 
 import (
         "context"
@@ -1079,7 +1800,425 @@ const (
 )
 </pre>
 
-                <pre class="file" id="file9" style="display: none">package domain
+                <pre class="file" id="file10" style="display: none">package gamification
+
+import (
+        "context"
+        "fmt"
+        "sync"
+        "time"
+
+        "github.com/aske/go_fi_chart/internal/domain"
+)
+
+// MemoryRepository 게임화 프로필의 인메모리 저장소 구현체입니다.
+type MemoryRepository struct {
+        data  map[string]*Profile
+        mutex sync.RWMutex
+}
+
+// NewMemoryRepository 새로운 인메모리 저장소를 생성합니다.
+func NewMemoryRepository() *MemoryRepository <span class="cov8" title="1">{
+        return &amp;MemoryRepository{
+                data: make(map[string]*Profile),
+        }
+}</span>
+
+// Save 프로필을 저장합니다.
+func (r *MemoryRepository) Save(_ context.Context, profile *Profile) error <span class="cov8" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.data[profile.ID]; exists </span><span class="cov0" title="0">{
+                return domain.NewError("gamification", domain.ErrCodeAlreadyExists, fmt.Sprintf("profile with ID %s already exists", profile.ID))
+        }</span>
+
+        <span class="cov8" title="1">r.data[profile.ID] = profile
+        return nil</span>
+}
+
+// FindByID ID로 프로필을 조회합니다.
+func (r *MemoryRepository) FindByID(_ context.Context, id string) (*Profile, error) <span class="cov8" title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        if profile, exists := r.data[id]; exists </span><span class="cov8" title="1">{
+                return profile, nil
+        }</span>
+
+        <span class="cov8" title="1">return nil, domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile with ID %s not found", id))</span>
+}
+
+// Update 프로필을 업데이트합니다.
+func (r *MemoryRepository) Update(_ context.Context, profile *Profile) error <span class="cov8" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.data[profile.ID]; !exists </span><span class="cov0" title="0">{
+                return domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile with ID %s not found", profile.ID))
+        }</span>
+
+        <span class="cov8" title="1">profile.UpdatedAt = time.Now()
+        r.data[profile.ID] = profile
+        return nil</span>
+}
+
+// Delete ID로 프로필을 삭제합니다.
+func (r *MemoryRepository) Delete(_ context.Context, id string) error <span class="cov8" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        if _, exists := r.data[id]; !exists </span><span class="cov0" title="0">{
+                return domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile with ID %s not found", id))
+        }</span>
+
+        <span class="cov8" title="1">delete(r.data, id)
+        return nil</span>
+}
+
+// FindAll 검색 조건에 맞는 모든 프로필을 조회합니다.
+func (r *MemoryRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Profile, error) <span class="cov0"
+                                                                                                         title="0">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        profiles := make([]*Profile, 0, len(r.data))
+        for _, profile := range r.data </span><span class="cov0" title="0">{
+                profiles = append(profiles, profile)
+        }</span>
+        <span class="cov0" title="0">return profiles, nil</span>
+}
+
+// FindOne 검색 조건에 맞는 하나의 프로필을 조회합니다.
+func (r *MemoryRepository) FindOne(_ context.Context, _ domain.SearchCriteria) (*Profile, error) <span class="cov0"
+                                                                                                       title="0">{
+        return nil, domain.NewError("gamification", domain.ErrCodeNotImplemented, "FindOne not implemented")
+}</span>
+
+// WithTransaction 트랜잭션을 실행합니다.
+func (r *MemoryRepository) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error <span
+                                class="cov0" title="0">{
+        return fn(ctx)
+}</span>
+
+// FindByUserID 사용자 ID로 프로필을 조회합니다.
+func (r *MemoryRepository) FindByUserID(_ context.Context, userID string) (*Profile, error) <span class="cov8"
+                                                                                                  title="1">{
+        r.mutex.RLock()
+        defer r.mutex.RUnlock()
+
+        for _, profile := range r.data </span><span class="cov8" title="1">{
+                if profile.UserID == userID </span><span class="cov8" title="1">{
+                        return profile, nil
+                }</span>
+        }
+
+        <span class="cov0" title="0">return nil, domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile for user %s not found", userID))</span>
+}
+
+// UpdateExperience 사용자의 경험치를 업데이트합니다.
+func (r *MemoryRepository) UpdateExperience(_ context.Context, id string, exp int) error <span class="cov8" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        profile, exists := r.data[id]
+        if !exists </span><span class="cov0" title="0">{
+                return domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile with ID %s not found", id))
+        }</span>
+
+        <span class="cov8" title="1">leveledUp := profile.AddExperience(exp)
+        if leveledUp </span><span class="cov8" title="1">{
+                profile.UpdatedAt = time.Now()
+        }</span>
+
+        <span class="cov8" title="1">r.data[id] = profile
+        return nil</span>
+}
+
+// UpdateStats 사용자의 통계를 업데이트합니다.
+func (r *MemoryRepository) UpdateStats(_ context.Context, id string, stats Statistics) error <span class="cov8"
+                                                                                                   title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        profile, exists := r.data[id]
+        if !exists </span><span class="cov0" title="0">{
+                return domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile with ID %s not found", id))
+        }</span>
+
+        <span class="cov8" title="1">profile.Stats = stats
+        profile.UpdatedAt = time.Now()
+        r.data[id] = profile
+        return nil</span>
+}
+
+// AddBadge 사용자에게 뱃지를 추가합니다.
+func (r *MemoryRepository) AddBadge(_ context.Context, id string, badge Badge) error <span class="cov8" title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        profile, exists := r.data[id]
+        if !exists </span><span class="cov0" title="0">{
+                return domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile with ID %s not found", id))
+        }</span>
+
+        <span class="cov8" title="1">profile.Badges = append(profile.Badges, badge)
+        profile.Stats.BadgesEarned++
+        profile.UpdatedAt = time.Now()
+        r.data[id] = profile
+        return nil</span>
+}
+
+// UpdateStreak 사용자의 연속 달성을 업데이트합니다.
+func (r *MemoryRepository) UpdateStreak(_ context.Context, id string, streakType StreakType) error <span class="cov8"
+                                                                                                         title="1">{
+        r.mutex.Lock()
+        defer r.mutex.Unlock()
+
+        profile, exists := r.data[id]
+        if !exists </span><span class="cov0" title="0">{
+                return domain.NewError("gamification", domain.ErrCodeNotFound, fmt.Sprintf("profile with ID %s not found", id))
+        }</span>
+
+        <span class="cov8" title="1">profile.UpdateStreak(streakType)
+        r.data[id] = profile
+        return nil</span>
+}
+</pre>
+
+                <pre class="file" id="file11" style="display: none">package gamification
+
+import (
+        "time"
+
+        "github.com/aske/go_fi_chart/internal/domain"
+)
+
+// Level 사용자의 레벨을 나타냅니다.
+type Level struct {
+        Value       int
+        Experience  int
+        NextLevel   int
+        Title       string
+        UnlockedAt  time.Time
+        Description string
+}
+
+// Profile 사용자의 게임화 프로필을 나타냅니다.
+type Profile struct {
+        ID           string
+        UserID       string
+        Level        Level
+        Experience   int
+        Achievements []string // Achievement IDs
+        Badges       []Badge
+        Streaks      []Streak
+        Stats        Statistics
+        CreatedAt    time.Time
+        UpdatedAt    time.Time
+}
+
+func (p *Profile) GetID() string <span class="cov0" title="0">{
+        return p.ID
+}</span>
+
+func (p *Profile) GetCreatedAt() time.Time <span class="cov0" title="0">{
+        return p.CreatedAt
+}</span>
+
+func (p *Profile) GetUpdatedAt() time.Time <span class="cov0" title="0">{
+        return p.UpdatedAt
+}</span>
+
+// Badge 사용자가 획득한 뱃지를 나타냅니다.
+type Badge struct {
+        ID          string
+        Type        BadgeType
+        Title       string
+        Description string
+        Tier        BadgeTier
+        UnlockedAt  time.Time
+}
+
+// BadgeType 뱃지의 유형을 나타냅니다.
+type BadgeType string
+
+const (
+        BadgeTypeSaving    BadgeType = "SAVING"
+        BadgeTypeInvesting BadgeType = "INVESTING"
+        BadgeTypeCommunity BadgeType = "COMMUNITY"
+        BadgeTypeChallenge BadgeType = "CHALLENGE"
+)
+
+// BadgeTier 뱃지의 등급을 나타냅니다.
+type BadgeTier string
+
+const (
+        BadgeTierBronze  BadgeTier = "BRONZE"
+        BadgeTierSilver  BadgeTier = "SILVER"
+        BadgeTierGold    BadgeTier = "GOLD"
+        BadgeTierDiamond BadgeTier = "DIAMOND"
+)
+
+// Streak 연속 달성을 나타냅니다.
+type Streak struct {
+        Type        StreakType
+        Count       int
+        LastUpdated time.Time
+        MaxCount    int
+}
+
+// StreakType 연속 달성의 유형을 나타냅니다.
+type StreakType string
+
+const (
+        StreakTypeDaily   StreakType = "DAILY"
+        StreakTypeWeekly  StreakType = "WEEKLY"
+        StreakTypeMonthly StreakType = "MONTHLY"
+)
+
+// Statistics 사용자의 게임화 통계를 나타냅니다.
+type Statistics struct {
+        TotalSavings      float64
+        TotalInvestments  float64
+        GoalsCompleted    int
+        BadgesEarned      int
+        LongestStreak     int
+        CommunityRanking  int
+        ContributionScore float64
+}
+
+// NewProfile 새로운 게임화 프로필을 생성합니다.
+func NewProfile(userID string) *Profile <span class="cov8" title="1">{
+        now := time.Now()
+        return &amp;Profile{
+                ID:     domain.GenerateID(),
+                UserID: userID,
+                Level: Level{
+                        Value:       1,
+                        Experience:  0,
+                        NextLevel:   100,
+                        Title:       "초보 투자자",
+                        UnlockedAt:  now,
+                        Description: "자산 관리의 첫 걸음을 내딛었습니다.",
+                },
+                Experience:   0,
+                Achievements: make([]string, 0),
+                Badges:       make([]Badge, 0),
+                Streaks:      make([]Streak, 0),
+                Stats:        Statistics{},
+                CreatedAt:    now,
+                UpdatedAt:    now,
+        }
+}</span>
+
+// AddExperience 경험치를 추가하고 레벨업 여부를 반환합니다.
+func (p *Profile) AddExperience(exp int) bool <span class="cov8" title="1">{
+        p.Experience += exp
+        p.UpdatedAt = time.Now()
+
+        leveledUp := false
+        for p.Experience &gt;= p.Level.NextLevel </span><span class="cov8" title="1">{
+                p.levelUp()
+                leveledUp = true
+        }</span>
+        <span class="cov8" title="1">return leveledUp</span>
+}
+
+// levelUp 레벨을 올립니다.
+func (p *Profile) levelUp() <span class="cov8" title="1">{
+        p.Level.Value++
+        p.Level.Experience = p.Experience
+        p.Level.NextLevel = calculateNextLevelExp(p.Level.Value)
+        p.Level.UnlockedAt = time.Now()
+        p.updateLevelTitle()
+}</span>
+
+// calculateNextLevelExp 다음 레벨에 필요한 경험치를 계산합니다.
+func calculateNextLevelExp(level int) int <span class="cov8" title="1">{
+        return level * level * 100
+}</span>
+
+// updateLevelTitle 레벨에 따른 타이틀을 업데이트합니다.
+func (p *Profile) updateLevelTitle() <span class="cov8" title="1">{
+        switch </span>{
+        case p.Level.Value &gt;= 50:<span class="cov8" title="1">
+                p.Level.Title = "투자의 신"
+                p.Level.Description = "최고 수준의 투자 전문가입니다."</span>
+        case p.Level.Value &gt;= 40:<span class="cov8" title="1">
+                p.Level.Title = "투자 마스터"
+                p.Level.Description = "뛰어난 투자 실력을 보유하고 있습니다."</span>
+        case p.Level.Value &gt;= 30:<span class="cov8" title="1">
+                p.Level.Title = "숙련된 투자자"
+                p.Level.Description = "안정적인 투자 능력을 보유하고 있습니다."</span>
+        case p.Level.Value &gt;= 20:<span class="cov8" title="1">
+                p.Level.Title = "중급 투자자"
+                p.Level.Description = "투자의 기본을 완벽히 이해했습니다."</span>
+        default:<span class="cov8" title="1">
+                p.Level.Title = "초보 투자자"
+                p.Level.Description = "투자의 기초를 배우고 있습니다."</span>
+        }
+}
+
+// AddBadge 뱃지를 추가합니다.
+func (p *Profile) AddBadge(badgeType BadgeType, tier BadgeTier, title, description string) <span class="cov8" title="1">{
+        badge := Badge{
+                ID:          domain.GenerateID(),
+                Type:        badgeType,
+                Title:       title,
+                Description: description,
+                Tier:        tier,
+                UnlockedAt:  time.Now(),
+        }
+        p.Badges = append(p.Badges, badge)
+        p.Stats.BadgesEarned++
+        p.UpdatedAt = time.Now()
+}</span>
+
+// UpdateStreak 연속 달성을 업데이트합니다.
+func (p *Profile) UpdateStreak(streakType StreakType) <span class="cov8" title="1">{
+        now := time.Now()
+        for i, streak := range p.Streaks </span><span class="cov8" title="1">{
+                if streak.Type == streakType </span><span class="cov8" title="1">{
+                        if now.Sub(streak.LastUpdated) &lt;= getStreakTimeout(streakType) </span><span class="cov8"
+                                                                                                       title="1">{
+                                p.Streaks[i].Count++
+                                if p.Streaks[i].Count &gt; p.Streaks[i].MaxCount </span><span class="cov8" title="1">{
+                                        p.Streaks[i].MaxCount = p.Streaks[i].Count
+                                }</span>
+                        } else<span class="cov8" title="1"> {
+                                p.Streaks[i].Count = 1
+                        }</span>
+                        <span class="cov8" title="1">p.Streaks[i].LastUpdated = now
+                        return</span>
+                }
+        }
+
+        // 새로운 스트릭 추가
+        <span class="cov8" title="1">p.Streaks = append(p.Streaks, Streak{
+                Type:        streakType,
+                Count:       1,
+                LastUpdated: now,
+                MaxCount:    1,
+        })</span>
+}
+
+// getStreakTimeout 스트릭 타임아웃을 반환합니다.
+func getStreakTimeout(streakType StreakType) time.Duration <span class="cov8" title="1">{
+        switch streakType </span>{
+        case StreakTypeDaily:<span class="cov8" title="1">
+                return 24 * time.Hour</span>
+        case StreakTypeWeekly:<span class="cov0" title="0">
+                return 7 * 24 * time.Hour</span>
+        case StreakTypeMonthly:<span class="cov0" title="0">
+                return 30 * 24 * time.Hour</span>
+        default:<span class="cov0" title="0">
+                return 24 * time.Hour</span>
+        }
+}
+</pre>
+
+                <pre class="file" id="file12" style="display: none">package domain
 
 import (
         "context"
@@ -1136,7 +2275,19 @@ func NewRepositoryError(op string, err error) error <span class="cov0" title="0"
 }</span>
 </pre>
 
-                <pre class="file" id="file10" style="display: none">package events
+                <pre class="file" id="file13" style="display: none">package domain
+
+import (
+        "github.com/google/uuid"
+)
+
+// GenerateID UUID v4를 사용하여 고유한 ID를 생성합니다.
+func GenerateID() string <span class="cov0" title="0">{
+        return uuid.New().String()
+}</span>
+</pre>
+
+                <pre class="file" id="file14" style="display: none">package events
 
 import (
         "context"
@@ -1245,7 +2396,7 @@ func (p *SimplePublisher) Unsubscribe(handler domain.Handler) error <span class=
 }
 </pre>
 
-                <pre class="file" id="file11" style="display: none">package github
+                <pre class="file" id="file15" style="display: none">package github
 
 import (
         "context"
@@ -1296,7 +2447,7 @@ func (c *ActionCollector) Collect(ctx context.Context) ([]domain.Metric, error) 
 }
 </pre>
 
-                <pre class="file" id="file12" style="display: none">package alerts
+                <pre class="file" id="file16" style="display: none">package alerts
 
 import (
         "context"
@@ -1394,7 +2545,7 @@ func (n *SimpleNotifier) Notify(ctx context.Context, alert Alert) error <span cl
 }
 </pre>
 
-                <pre class="file" id="file13" style="display: none">package prometheus
+                <pre class="file" id="file17" style="display: none">package prometheus
 
 import (
         "context"
@@ -1502,7 +2653,7 @@ func (e *Exporter) getOrCreateCollector(m metrics.Metric) (prometheus.Collector,
 }
 </pre>
 
-                <pre class="file" id="file14" style="display: none">package metrics
+                <pre class="file" id="file18" style="display: none">package metrics
 
 import (
         "context"
@@ -1594,7 +2745,7 @@ func (c *SimpleCollector) Reset() <span class="cov8" title="1">{
 }</span>
 </pre>
 
-                <pre class="file" id="file15" style="display: none">package github
+                <pre class="file" id="file19" style="display: none">package github
 
 import (
         "context"
@@ -1702,7 +2853,7 @@ func (c *ActionCollector) AddDurationMetric(name string, duration time.Duration)
 }</span>
 </pre>
 
-                <pre class="file" id="file16" style="display: none">package health
+                <pre class="file" id="file20" style="display: none">package health
 
 import (
         "context"

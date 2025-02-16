@@ -13,71 +13,66 @@ type TestFixture struct {
 
 // NewTestFixture 새로운 테스트 픽스처를 생성합니다.
 func NewTestFixture() *TestFixture {
-	now := time.Now()
-	userID := "test-user-1"
-
-	// 자산 데이터 생성
 	assets := []*Asset{
 		{
 			ID:        "asset-1",
-			UserID:    userID,
+			UserID:    "test-user-1",
 			Type:      Cash,
 			Name:      "현금 자산",
-			Amount:    1000000,
-			CreatedAt: now,
-			UpdatedAt: now,
+			Amount:    Money{Amount: 1000000.0, Currency: "KRW"},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 		{
 			ID:        "asset-2",
-			UserID:    userID,
+			UserID:    "test-user-1",
 			Type:      Stock,
-			Name:      "주식 투자",
-			Amount:    5000000,
-			CreatedAt: now,
-			UpdatedAt: now,
+			Name:      "주식 자산",
+			Amount:    Money{Amount: 2000000.0, Currency: "KRW"},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 		{
 			ID:        "asset-3",
-			UserID:    userID,
-			Type:      Bond,
-			Name:      "채권 투자",
-			Amount:    3000000,
-			CreatedAt: now,
-			UpdatedAt: now,
+			UserID:    "test-user-1",
+			Type:      RealEstate,
+			Name:      "부동산 자산",
+			Amount:    Money{Amount: 300000000.0, Currency: "KRW"},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	}
 
-	// 거래 내역 데이터 생성
 	transactions := []*Transaction{
 		{
 			ID:          "tx-1",
-			AssetID:     "asset-1",
+			AssetID:     assets[0].ID,
 			Type:        Income,
-			Amount:      500000,
+			Amount:      500000.0,
 			Category:    "급여",
 			Description: "3월 급여",
-			Date:        now,
-			CreatedAt:   now,
+			Date:        time.Now(),
+			CreatedAt:   time.Now(),
 		},
 		{
 			ID:          "tx-2",
-			AssetID:     "asset-1",
+			AssetID:     assets[0].ID,
 			Type:        Expense,
-			Amount:      100000,
+			Amount:      100000.0,
 			Category:    "식비",
 			Description: "3월 식비",
-			Date:        now,
-			CreatedAt:   now,
+			Date:        time.Now(),
+			CreatedAt:   time.Now(),
 		},
 		{
 			ID:          "tx-3",
-			AssetID:     "asset-2",
+			AssetID:     assets[0].ID,
 			Type:        Transfer,
-			Amount:      1000000,
-			Category:    "투자",
-			Description: "주식 매수",
-			Date:        now,
-			CreatedAt:   now,
+			Amount:      1000000.0,
+			Category:    "이체",
+			Description: "주식 계좌로 이체",
+			Date:        time.Now(),
+			CreatedAt:   time.Now(),
 		},
 	}
 
@@ -85,7 +80,7 @@ func NewTestFixture() *TestFixture {
 	portfolios := []*Portfolio{
 		{
 			ID:     "portfolio-1",
-			UserID: userID,
+			UserID: "test-user-1",
 			Assets: []PortfolioAsset{
 				{
 					AssetID: "asset-1",
@@ -100,8 +95,8 @@ func NewTestFixture() *TestFixture {
 					Weight:  0.3, // 30%
 				},
 			},
-			CreatedAt: now,
-			UpdatedAt: now,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		},
 	}
 
