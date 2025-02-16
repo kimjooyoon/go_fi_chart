@@ -148,6 +148,57 @@ const (
 	RewardTypeFeature RewardType = "FEATURE"
 )
 
+// Percentage 퍼센트 값을 나타냅니다.
+type Percentage struct {
+	Value float64
+}
+
+// NewPercentage Percentage 값 객체를 생성합니다.
+func NewPercentage(value float64) (Percentage, error) {
+	if value < 0 || value > 100 {
+		return Percentage{}, fmt.Errorf("퍼센트 값은 0에서 100 사이여야 합니다: %f", value)
+	}
+	return Percentage{Value: value}, nil
+}
+
+// Add 두 Percentage 값을 더합니다.
+func (p Percentage) Add(other Percentage) (Percentage, error) {
+	sum := p.Value + other.Value
+	return NewPercentage(sum)
+}
+
+// Subtract 두 Percentage 값을 뺍니다.
+func (p Percentage) Subtract(other Percentage) (Percentage, error) {
+	diff := p.Value - other.Value
+	return NewPercentage(diff)
+}
+
+// Multiply Percentage 값을 주어진 배수로 곱합니다.
+func (p Percentage) Multiply(multiplier float64) (Percentage, error) {
+	result := p.Value * multiplier
+	return NewPercentage(result)
+}
+
+// IsZero Percentage 값이 0인지 확인합니다.
+func (p Percentage) IsZero() bool {
+	return p.Value == 0
+}
+
+// IsComplete Percentage 값이 100%인지 확인합니다.
+func (p Percentage) IsComplete() bool {
+	return p.Value == 100
+}
+
+// ToDecimal Percentage 값을 소수로 변환합니다.
+func (p Percentage) ToDecimal() float64 {
+	return p.Value / 100
+}
+
+// FromDecimal 소수를 Percentage로 변환합니다.
+func FromDecimal(decimal float64) (Percentage, error) {
+	return NewPercentage(decimal * 100)
+}
+
 // Asset 자산을 나타냅니다.
 type Asset struct {
 	ID           string
@@ -473,4 +524,76 @@ func (a *Asset) ValidateTransaction(tx *Transaction) error {
 	}
 
 	return nil
+}
+
+// TimeRange 시간 범위를 나타냅니다.
+type TimeRange struct {
+	Start time.Time
+	End   time.Time
+}
+
+// NewTimeRange TimeRange 값 객체를 생성합니다.
+func NewTimeRange(start, end time.Time) (TimeRange, error) {
+	if end.Before(start) {
+		return TimeRange{}, fmt.Errorf("종료 시간은 시작 시간보다 이후여야 합니다: %v > %v", start, end)
+	}
+	return TimeRange{
+		Start: start,
+		End:   end,
+	}, nil
+}
+
+// Duration 기간을 반환합니다.
+func (tr TimeRange) Duration() time.Duration {
+	return tr.End.Sub(tr.Start)
+}
+
+// Contains 주어진 시간이 범위 내에 있는지 확인합니다.
+func (tr TimeRange) Contains(t time.Time) bool {
+	return (t.Equal(tr.Start) || t.After(tr.Start)) && (t.Equal(tr.End) || t.Before(tr.End))
+}
+
+// Overlaps 다른 TimeRange와 겹치는지 확인합니다.
+func (tr TimeRange) Overlaps(other TimeRange) bool {
+	return tr.Contains(other.Start) || tr.Contains(other.End) ||
+		other.Contains(tr.Start) || other.Contains(tr.End)
+}
+
+// IsZero TimeRange가 zero value인지 확인합니다.
+func (tr TimeRange) IsZero() bool {
+	return tr.Start.IsZero() && tr.End.IsZero()
+}
+
+// Split TimeRange를 주어진 간격으로 분할합니다.
+func (tr TimeRange) Split(interval time.Duration) []TimeRange {
+	if interval <= 0 {
+		return []TimeRange{tr}
+	}
+
+	var ranges []TimeRange
+	current := tr.Start
+	for current.Before(tr.End) {
+		next := current.Add(interval)
+		if next.After(tr.End) {
+			next = tr.End
+		}
+		if r, err := NewTimeRange(current, next); err == nil {
+			ranges = append(ranges, r)
+		}
+		current = next
+	}
+	return ranges
+}
+
+// Extend TimeRange를 주어진 기간만큼 확장합니다.
+func (tr TimeRange) Extend(d time.Duration) (TimeRange, error) {
+	return NewTimeRange(tr.Start, tr.End.Add(d))
+}
+
+// Shift TimeRange를 주어진 기간만큼 이동합니다.
+func (tr TimeRange) Shift(d time.Duration) TimeRange {
+	return TimeRange{
+		Start: tr.Start.Add(d),
+		End:   tr.End.Add(d),
+	}
 }

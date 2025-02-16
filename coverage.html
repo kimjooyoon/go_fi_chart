@@ -71,7 +71,7 @@
                                 (62.0%)
                         </option>
 
-                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (29.3%)
+                        <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (49.1%)
                         </option>
 
                         <option value="file7">github.com/aske/go_fi_chart/internal/domain/asset/test_fixture.go
@@ -1462,6 +1462,57 @@ const (
         RewardTypeFeature RewardType = "FEATURE"
 )
 
+// Percentage 퍼센트 값을 나타냅니다.
+type Percentage struct {
+        Value float64
+}
+
+// NewPercentage Percentage 값 객체를 생성합니다.
+func NewPercentage(value float64) (Percentage, error) <span class="cov8" title="1">{
+        if value &lt; 0 || value &gt; 100 </span><span class="cov8" title="1">{
+                return Percentage{}, fmt.Errorf("퍼센트 값은 0에서 100 사이여야 합니다: %f", value)
+        }</span>
+        <span class="cov8" title="1">return Percentage{Value: value}, nil</span>
+}
+
+// Add 두 Percentage 값을 더합니다.
+func (p Percentage) Add(other Percentage) (Percentage, error) <span class="cov8" title="1">{
+        sum := p.Value + other.Value
+        return NewPercentage(sum)
+}</span>
+
+// Subtract 두 Percentage 값을 뺍니다.
+func (p Percentage) Subtract(other Percentage) (Percentage, error) <span class="cov8" title="1">{
+        diff := p.Value - other.Value
+        return NewPercentage(diff)
+}</span>
+
+// Multiply Percentage 값을 주어진 배수로 곱합니다.
+func (p Percentage) Multiply(multiplier float64) (Percentage, error) <span class="cov8" title="1">{
+        result := p.Value * multiplier
+        return NewPercentage(result)
+}</span>
+
+// IsZero Percentage 값이 0인지 확인합니다.
+func (p Percentage) IsZero() bool <span class="cov8" title="1">{
+        return p.Value == 0
+}</span>
+
+// IsComplete Percentage 값이 100%인지 확인합니다.
+func (p Percentage) IsComplete() bool <span class="cov8" title="1">{
+        return p.Value == 100
+}</span>
+
+// ToDecimal Percentage 값을 소수로 변환합니다.
+func (p Percentage) ToDecimal() float64 <span class="cov8" title="1">{
+        return p.Value / 100
+}</span>
+
+// FromDecimal 소수를 Percentage로 변환합니다.
+func FromDecimal(decimal float64) (Percentage, error) <span class="cov8" title="1">{
+        return NewPercentage(decimal * 100)
+}</span>
+
 // Asset 자산을 나타냅니다.
 type Asset struct {
         ID           string
@@ -1792,6 +1843,79 @@ func (a *Asset) ValidateTransaction(tx *Transaction) error <span class="cov0" ti
 
         <span class="cov0" title="0">return nil</span>
 }
+
+// TimeRange 시간 범위를 나타냅니다.
+type TimeRange struct {
+        Start time.Time
+        End   time.Time
+}
+
+// NewTimeRange TimeRange 값 객체를 생성합니다.
+func NewTimeRange(start, end time.Time) (TimeRange, error) <span class="cov8" title="1">{
+        if end.Before(start) </span><span class="cov8" title="1">{
+                return TimeRange{}, fmt.Errorf("종료 시간은 시작 시간보다 이후여야 합니다: %v &gt; %v", start, end)
+        }</span>
+        <span class="cov8" title="1">return TimeRange{
+                Start: start,
+                End:   end,
+        }, nil</span>
+}
+
+// Duration 기간을 반환합니다.
+func (tr TimeRange) Duration() time.Duration <span class="cov8" title="1">{
+        return tr.End.Sub(tr.Start)
+}</span>
+
+// Contains 주어진 시간이 범위 내에 있는지 확인합니다.
+func (tr TimeRange) Contains(t time.Time) bool <span class="cov8" title="1">{
+        return (t.Equal(tr.Start) || t.After(tr.Start)) &amp;&amp; (t.Equal(tr.End) || t.Before(tr.End))
+}</span>
+
+// Overlaps 다른 TimeRange와 겹치는지 확인합니다.
+func (tr TimeRange) Overlaps(other TimeRange) bool <span class="cov8" title="1">{
+        return tr.Contains(other.Start) || tr.Contains(other.End) ||
+                other.Contains(tr.Start) || other.Contains(tr.End)
+}</span>
+
+// IsZero TimeRange가 zero value인지 확인합니다.
+func (tr TimeRange) IsZero() bool <span class="cov0" title="0">{
+        return tr.Start.IsZero() &amp;&amp; tr.End.IsZero()
+}</span>
+
+// Split TimeRange를 주어진 간격으로 분할합니다.
+func (tr TimeRange) Split(interval time.Duration) []TimeRange <span class="cov8" title="1">{
+        if interval &lt;= 0 </span><span class="cov8" title="1">{
+                return []TimeRange{tr}
+        }</span>
+
+        <span class="cov8" title="1">var ranges []TimeRange
+        current := tr.Start
+        for current.Before(tr.End) </span><span class="cov8" title="1">{
+                next := current.Add(interval)
+                if next.After(tr.End) </span><span class="cov8" title="1">{
+                        next = tr.End
+                }</span>
+                <span class="cov8" title="1">if r, err := NewTimeRange(current, next); err == nil </span><span
+                                class="cov8" title="1">{
+                        ranges = append(ranges, r)
+                }</span>
+                <span class="cov8" title="1">current = next</span>
+        }
+        <span class="cov8" title="1">return ranges</span>
+}
+
+// Extend TimeRange를 주어진 기간만큼 확장합니다.
+func (tr TimeRange) Extend(d time.Duration) (TimeRange, error) <span class="cov8" title="1">{
+        return NewTimeRange(tr.Start, tr.End.Add(d))
+}</span>
+
+// Shift TimeRange를 주어진 기간만큼 이동합니다.
+func (tr TimeRange) Shift(d time.Duration) TimeRange <span class="cov8" title="1">{
+        return TimeRange{
+                Start: tr.Start.Add(d),
+                End:   tr.End.Add(d),
+        }
+}</span>
 </pre>
 
                 <pre class="file" id="file7" style="display: none">package asset

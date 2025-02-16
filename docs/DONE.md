@@ -50,6 +50,22 @@
 - 사용 예시 및 확장 가이드 추가
 - 문서 연결 구조 개선
 
+## 2025-02-16
+
+- [x] Value Object 구현: Percentage
+- 기본 구조 정의
+- 유효성 검사 구현
+- 연산 메서드 구현 (Add, Subtract, Multiply)
+- 변환 메서드 구현 (ToDecimal, FromDecimal)
+- 테스트 코드 작성 및 검증
+
+- [x] Value Object 구현: TimeRange
+- 기본 구조 정의
+- 유효성 검사 구현
+- 연산 메서드 구현 (Duration, Contains, Overlaps)
+- 유틸리티 메서드 구현 (Split, Extend, Shift)
+- 테스트 코드 작성 및 검증
+
 ## 작업 완료 기록 방법
 1. 날짜별로 구분하여 기록
 2. 완료된 작업은 체크박스에 체크 표시
