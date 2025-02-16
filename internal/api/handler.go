@@ -7,7 +7,7 @@ import (
 
 	"github.com/aske/go_fi_chart/internal/domain/asset"
 	"github.com/aske/go_fi_chart/internal/domain/gamification"
-	"github.com/go-chi/chi/v5"
+	chi "github.com/go-chi/chi/v5"
 )
 
 // CreateAssetRequest 자산 생성 요청
