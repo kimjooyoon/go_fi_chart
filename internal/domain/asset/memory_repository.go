@@ -178,8 +178,15 @@ func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amoun
 }
 
 // FindAll 검색 조건에 맞는 모든 Asset을 조회합니다.
-func (r *MemoryAssetRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Asset, error) {
-	return r.repo.FindAll(ctx, criteria)
+func (r *MemoryAssetRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Asset, error) {
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
+
+	var result []*Asset
+	for _, asset := range r.repo.data {
+		result = append(result, asset)
+	}
+	return result, nil
 }
 
 // FindOne 검색 조건에 맞는 하나의 Asset을 조회합니다.
@@ -281,8 +288,15 @@ func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID 
 }
 
 // FindAll 검색 조건에 맞는 모든 Transaction을 조회합니다.
-func (r *MemoryTransactionRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Transaction, error) {
-	return r.repo.FindAll(ctx, criteria)
+func (r *MemoryTransactionRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Transaction, error) {
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
+
+	var result []*Transaction
+	for _, tx := range r.repo.data {
+		result = append(result, tx)
+	}
+	return result, nil
 }
 
 // FindOne 검색 조건에 맞는 하나의 Transaction을 조회합니다.
@@ -358,8 +372,15 @@ func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, a
 }
 
 // FindAll 검색 조건에 맞는 모든 Portfolio를 조회합니다.
-func (r *MemoryPortfolioRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Portfolio, error) {
-	return r.repo.FindAll(ctx, criteria)
+func (r *MemoryPortfolioRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Portfolio, error) {
+	r.repo.mutex.RLock()
+	defer r.repo.mutex.RUnlock()
+
+	var result []*Portfolio
+	for _, portfolio := range r.repo.data {
+		result = append(result, portfolio)
+	}
+	return result, nil
 }
 
 // FindOne 검색 조건에 맞는 하나의 Portfolio를 조회합니다.

@@ -68,7 +68,7 @@
                         </option>
 
                         <option value="file5">github.com/aske/go_fi_chart/internal/domain/asset/memory_repository.go
-                                (69.3%)
+                                (62.0%)
                         </option>
 
                         <option value="file6">github.com/aske/go_fi_chart/internal/domain/asset/model.go (34.3%)
@@ -1032,10 +1032,17 @@ func (r *MemoryAssetRepository) UpdateAmount(_ context.Context, id string, amoun
 }
 
 // FindAll 검색 조건에 맞는 모든 Asset을 조회합니다.
-func (r *MemoryAssetRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Asset, error) <span
-                                class="cov0" title="0">{
-        return r.repo.FindAll(ctx, criteria)
-}</span>
+func (r *MemoryAssetRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Asset, error) <span class="cov0"
+                                                                                                            title="0">{
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
+
+        var result []*Asset
+        for _, asset := range r.repo.data </span><span class="cov0" title="0">{
+                result = append(result, asset)
+        }</span>
+        <span class="cov0" title="0">return result, nil</span>
+}
 
 // FindOne 검색 조건에 맞는 하나의 Asset을 조회합니다.
 func (r *MemoryAssetRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Asset, error) <span
@@ -1142,10 +1149,17 @@ func (r *MemoryTransactionRepository) GetTotalAmount(_ context.Context, assetID 
 }
 
 // FindAll 검색 조건에 맞는 모든 Transaction을 조회합니다.
-func (r *MemoryTransactionRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Transaction, error) <span
+func (r *MemoryTransactionRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Transaction, error) <span
                                 class="cov0" title="0">{
-        return r.repo.FindAll(ctx, criteria)
-}</span>
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
+
+        var result []*Transaction
+        for _, tx := range r.repo.data </span><span class="cov0" title="0">{
+                result = append(result, tx)
+        }</span>
+        <span class="cov0" title="0">return result, nil</span>
+}
 
 // FindOne 검색 조건에 맞는 하나의 Transaction을 조회합니다.
 func (r *MemoryTransactionRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Transaction, error) <span
@@ -1226,10 +1240,17 @@ func (r *MemoryPortfolioRepository) UpdateAssets(_ context.Context, id string, a
 }
 
 // FindAll 검색 조건에 맞는 모든 Portfolio를 조회합니다.
-func (r *MemoryPortfolioRepository) FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Portfolio, error) <span
+func (r *MemoryPortfolioRepository) FindAll(_ context.Context, _ domain.SearchCriteria) ([]*Portfolio, error) <span
                                 class="cov0" title="0">{
-        return r.repo.FindAll(ctx, criteria)
-}</span>
+        r.repo.mutex.RLock()
+        defer r.repo.mutex.RUnlock()
+
+        var result []*Portfolio
+        for _, portfolio := range r.repo.data </span><span class="cov0" title="0">{
+                result = append(result, portfolio)
+        }</span>
+        <span class="cov0" title="0">return result, nil</span>
+}
 
 // FindOne 검색 조건에 맞는 하나의 Portfolio를 조회합니다.
 func (r *MemoryPortfolioRepository) FindOne(ctx context.Context, criteria domain.SearchCriteria) (*Portfolio, error) <span

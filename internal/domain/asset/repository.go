@@ -14,6 +14,7 @@ type Repository interface {
 	FindByUserID(ctx context.Context, userID string) ([]*Asset, error)
 	FindByType(ctx context.Context, assetType Type) ([]*Asset, error)
 	UpdateAmount(ctx context.Context, id string, amount float64) error
+	FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Asset, error)
 }
 
 // TransactionRepository Transaction 도메인의 저장소 인터페이스
@@ -23,6 +24,7 @@ type TransactionRepository interface {
 	FindByAssetID(ctx context.Context, assetID string) ([]*Transaction, error)
 	FindByDateRange(ctx context.Context, start, end time.Time) ([]*Transaction, error)
 	GetTotalAmount(ctx context.Context, assetID string) (Money, error)
+	FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Transaction, error)
 }
 
 // PortfolioRepository Portfolio 도메인의 저장소 인터페이스
@@ -31,4 +33,5 @@ type PortfolioRepository interface {
 
 	FindByUserID(ctx context.Context, userID string) (*Portfolio, error)
 	UpdateAssets(ctx context.Context, id string, assets []PortfolioAsset) error
+	FindAll(ctx context.Context, criteria domain.SearchCriteria) ([]*Portfolio, error)
 }
