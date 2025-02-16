@@ -1,141 +1,122 @@
 # 개발 컨벤션
 
-## 코드 스타일
+## 도메인 모델링
 
-### 1. Go 코드 스타일
-- [Effective Go](https://golang.org/doc/effective_go) 가이드라인 준수
-- `gofmt` 사용 필수
-- `golangci-lint` 규칙 준수
+### 1. 애그리게잇 설계
+- 트랜잭션 일관성 경계 정의
+- 이벤트 발행 책임 할당
+- 불변 조건 관리
 
-### 2. 패키지 구조
+### 2. 이벤트 모델링
+- 도메인 이벤트 명명 규칙: `{엔티티}{상태변경}`
+- 이벤트 버전 관리
+- 이벤트 스키마 문서화
+
+### 3. CQRS 패턴
+- Command 모델: 도메인 중심 설계
+- Query 모델: 성능 최적화
+- 이벤트 핸들러 구현
+
+## 코드 구조
+
+### 1. 프로젝트 레이아웃
 ```
 service/
-├── cmd/                    # 실행 파일
+├── cmd/
 │   └── server/
-│       └── main.go
-├── internal/              # 내부 패키지
-│   ├── api/              # API 핸들러
-│   ├── domain/           # 도메인 모델
-│   └── infrastructure/   # 인프라 구현
-└── pkg/                  # 공개 패키지
+├── internal/
+│   ├── domain/         # 도메인 모델, 이벤트
+│   ├── application/    # 유스케이스, 커맨드 핸들러
+│   ├── infrastructure/ # 저장소, 메시징
+│   └── api/           # API 엔드포인트
+└── pkg/               # 공개 패키지
+```
+
+### 2. 도메인 패키지 구조
+```
+domain/
+├── model.go           # 도메인 모델
+├── events.go         # 도메인 이벤트
+├── commands.go       # 커맨드 정의
+├── repository.go     # 저장소 인터페이스
+└── service.go        # 도메인 서비스
 ```
 
 ### 3. 네이밍 컨벤션
-- 파일명: 스네이크 케이스 (`user_repository.go`)
-- 패키지명: 소문자, 단일 단어
-- 인터페이스: 동사+er (`Reader`, `Writer`)
-- 메서드/함수: 카멜 케이스 (`GetUserByID`)
-- 상수: 대문자 스네이크 케이스 (`MAX_RETRY_COUNT`)
-
-### 4. 주석 규칙
-- 모든 공개 API에 주석 필수
-- 한글 주석 사용
-- 패키지 설명 필수
-```go
-// Package user는 사용자 관련 기능을 제공합니다.
-package user
-
-// User는 사용자 정보를 나타냅니다.
-type User struct {
-// ID는 사용자의 고유 식별자입니다.
-ID string
-}
-```
+- 이벤트: `{Entity}{Event}Event`
+- 커맨드: `{Action}{Entity}Command`
+- 핸들러: `{Entity}{Event}Handler`
 
 ## 테스트
 
-### 1. 테스트 규칙
-- 모든 공개 함수에 대한 테스트 작성
-- 테이블 기반 테스트 사용
-- 테스트 커버리지 80% 이상 유지
+### 1. 테스트 계층
+- 단위 테스트: 도메인 모델, 이벤트
+- 통합 테스트: 이벤트 흐름, 저장소
+- E2E 테스트: API, 이벤트 처리
 
-### 2. 테스트 네이밍
+### 2. 이벤트 테스트
 ```go
-func TestUserRepository_GetUser_should_return_user_when_exists(t *testing.T)
-func TestUserRepository_GetUser_should_return_error_when_not_found(t *testing.T)
-```
-
-### 3. 테스트 구조
-```go
+func TestAssetCreatedEvent_Should_Update_ReadModel(t *testing.T) {
 // Given
-// 테스트 데이터 및 조건 설정
-
 // When
-// 테스트할 기능 실행
-
 // Then
-// 결과 검증
+}
 ```
+
+### 3. 테스트 데이터
+- 테스트 픽스처 관리
+- 이벤트 스트림 모킹
+- 저장소 격리
 
 ## 에러 처리
 
-### 1. 에러 타입
+### 1. 도메인 에러
 ```go
-// 도메인 에러
 type DomainError struct {
 Code    string
 Message string
-}
-
-// 인프라 에러
-type InfrastructureError struct {
-Code    string
-Message string
-Cause   error
+Details map[string]interface{}
 }
 ```
 
-### 2. 에러 메시지
-- 명확하고 구체적인 메시지
-- 한글 메시지 사용
-- 해결 방법 포함 (가능한 경우)
+### 2. 이벤트 처리 에러
+- 재시도 가능 여부 표시
+- 컨텍스트 정보 포함
+- 에러 로깅 정책
 
 ## 로깅
 
-### 1. 로그 레벨
-- DEBUG: 개발 시 상세 정보
-- INFO: 일반적인 작업 정보
-- WARN: 잠재적 문제
-- ERROR: 처리된 에러
-- FATAL: 복구 불가능한 에러
+### 1. 이벤트 로깅
+- 이벤트 메타데이터 포함
+- 상관관계 ID 추적
+- 성능 메트릭 수집
 
-### 2. 로그 포맷
+### 2. 구조화된 로깅
 ```json
 {
 "level": "INFO",
-"timestamp": "2024-02-16T12:00:00Z",
-"service": "asset",
-"trace_id": "abc123",
-"message": "자산 생성 완료",
-"data": {
-"asset_id": "123",
-"user_id": "456"
-}
+"event_id": "uuid",
+"event_type": "AssetCreated",
+"aggregate_id": "asset-123",
+"correlation_id": "uuid",
+"timestamp": "2024-02-16T12:00:00Z"
 }
 ```
 
 ## 버전 관리
 
-### 1. 브랜치 전략
-- main: 프로덕션 코드
-- develop: 개발 코드
-- feature/*: 기능 개발
-- bugfix/*: 버그 수정
-- release/*: 릴리스 준비
+### 1. 이벤트 버전 관리
+- 이벤트 스키마 버전
+- 마이그레이션 전략
+- 하위 호환성 유지
 
-### 2. 커밋 메시지
-```
-feat: 새로운 기능 추가
-fix: 버그 수정
-docs: 문서 수정
-style: 코드 포맷팅
-refactor: 코드 리팩토링
-test: 테스트 코드
-chore: 빌드 프로세스 변경
-```
+### 2. API 버전 관리
+- API 버전 정책
+- 변경 이력 관리
+- 클라이언트 마이그레이션
 
-### 3. Pull Request
-- 제목: `[타입] 작업 내용 요약`
-- 본문: 작업 내용 상세 설명
-- 리뷰어: 최소 1명 이상
-- 테스트 결과 포함 
+### 3. 브랜치 전략
+- main: 프로덕션
+- develop: 개발
+- feature/*: 기능
+- release/*: 릴리스

@@ -1,150 +1,164 @@
-# Go Fi Chart
+# Go Financial Chart
 
 [![CI](https://github.com/kimjooyoon/go_fi_chart/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kimjooyoon/go_fi_chart/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/kimjooyoon/go_fi_chart/branch/main/graph/badge.svg)](https://codecov.io/gh/kimjooyoon/go_fi_chart)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kimjooyoon/go_fi_chart)](https://goreportcard.com/report/github.com/kimjooyoon/go_fi_chart)
 
-금융 자산 관리 및 포트폴리오 분석을 위한 도메인 주도 설계(DDD) 기반의 마이크로서비스 플랫폼
+## 개요
 
-## 프로젝트 개요
+Go Financial Chart는 도메인 주도 설계와 이벤트 기반 아키텍처를 기반으로 구현된 고성능 금융 자산 관리 플랫폼입니다. CQRS 패턴과 결과적 일관성 모델을 채택하여 확장성과 유연성을 보장합니다.
 
-Go Fi Chart는 금융 자산 관리를 위한 확장 가능한 마이크로서비스 플랫폼입니다. 도메인 주도 설계 원칙을 기반으로 구축되어 복잡한 금융 도메인을 효과적으로 모델링하고 관리합니다.
+## 핵심 기능
 
-### 핵심 도메인
+### 자산 관리
+- 다양한 금융 자산 유형 지원
+- 실시간 자산 가치 평가
+- 목표 기반 자산 관리
+- 이벤트 기반 상태 추적
 
-- **자산 관리 (Asset Domain)**
-- 자산의 생성, 평가, 추적
-- 자산 가치 계산 및 성과 측정
-- 복잡한 자산 구조 모델링
+### 포트폴리오 관리
+- 동적 자산 배분
+- 자동 포트폴리오 리밸런싱
+- 실시간 성과 분석
+- 목표 달성 모니터링
 
-- **포트폴리오 관리 (Portfolio Domain)**
-- 포트폴리오 구성 및 자산 배분
-- 리밸런싱 전략
-- 성과 분석 및 리스크 관리
+### 거래 관리
+- 이벤트 소싱 기반 거래 처리
+- 실시간 거래 상태 추적
+- 거래 이력 관리
+- 결과적 일관성 보장
 
-- **거래 관리 (Transaction Domain)**
-- 거래 실행 및 기록
-- 거래 이력 추적
-- 정산 및 검증
-
-- **모니터링 (Monitoring Domain)**
-- 시스템 상태 추적
-- 성능 메트릭 수집
-- 이상 징후 감지 및 알림
+### 모니터링
+- 실시간 시스템 메트릭
+- 분산 추적
+- 이벤트 처리 모니터링
+- 비즈니스 인사이트 분석
 
 ## 아키텍처
 
-### 바운디드 컨텍스트
+### 도메인 주도 설계
+- 풍부한 도메인 모델
+- 명확한 바운디드 컨텍스트
+- 도메인 이벤트 중심 설계
+- 유비쿼터스 언어 적용
 
-각 도메인은 독립된 바운디드 컨텍스트로 구현되어 있으며, 명확한 컨텍스트 경계와 도메인 모델을 가집니다:
+### 이벤트 기반 아키텍처
+- 이벤트 소싱 패턴
+- CQRS 구현
+- 결과적 일관성 모델
+- 비동기 이벤트 처리
 
-1. **Asset 서비스** (포트: 8080)
-- 자산 애그리게잇
-- 가치 평가 정책
-- 성과 측정 도메인 서비스
+### 마이크로서비스
+- 자율적 서비스
+- 독립적 배포
+- 격리된 데이터 관리
+- 서비스 간 이벤트 통신
 
-2. **Portfolio 서비스** (포트: 8081)
-- 포트폴리오 애그리게잇
-- 자산 배분 정책
-- 리밸런싱 도메인 서비스
+## 기술 스택
 
-3. **Transaction 서비스** (포트: 8082)
-- 거래 애그리게잇
-- 거래 정책
-- 정산 도메인 서비스
-
-4. **Monitoring 서비스** (포트: 8083)
-- 메트릭 수집기
-- 알림 정책
-- 상태 모니터링 서비스
-
-### 기술 스택
-
-- **언어 및 프레임워크**
+### 핵심 기술
 - Go 1.24.0
-- Chi 웹 프레임워크
-- Event Sourcing (계획)
+- gRPC & GraphQL
+- MongoDB & PostgreSQL
+- Apache Kafka
 
-- **영속성**
-- 인메모리 저장소 (현재)
-- PostgreSQL (계획)
-- Event Store (계획)
+### 인프라스트럭처
+- Docker & Kubernetes
+- Istio Service Mesh
+- Prometheus & Grafana
+- ELK Stack
 
-- **모니터링**
-- Prometheus
-- Grafana
+## 프로젝트 구조
+```
+.
+├── cmd/                    # 실행 파일
+│   └── server/
+│       └── main.go
+├── docs/                   # 문서
+│   ├── architecture/      # 아키텍처 문서
+│   │   ├── API_CONTRACTS.md
+│   │   ├── BOUNDED_CONTEXTS.md
+│   │   ├── CONTEXT_MAP.md
+│   │   ├── domain-models.md
+│   │   └── event-driven.md
+│   ├── development/       # 개발 가이드
+│   │   ├── conventions.md
+│   │   └── workflow.md
+│   ├── event-storming/    # 이벤트 스토밍 결과
+│   │   ├── 1.EVENTS.md
+│   │   ├── 2.COMMANDS.md
+│   │   └── 3.AGGREGATES.md
+│   ├── monitoring/        # 모니터링 문서
+│   └── services/          # 서비스 문서
+├── internal/              # 내부 패키지
+│   ├── api/              # API 핸들러
+│   ├── config/           # 설정
+│   ├── di/               # 의존성 주입
+│   ├── domain/           # 도메인 모델
+│   │   ├── asset/       # 자산 도메인
+│   │   ├── event/       # 이벤트 정의
+│   │   └── gamification/# 게이미피케이션
+│   └── infrastructure/   # 인프라스트럭처
+│       └── events/       # 이벤트 처리
+├── metrics/              # 메트릭 수집
+│   └── github/          # GitHub 메트릭
+├── pkg/                 # 공개 패키지
+│   ├── domain/         # 공유 도메인 모델
+│   │   └── valueobjects/# 값 객체
+│   └── services/       # 공유 서비스
+└── services/           # 마이크로서비스
+├── analysis/       # 분석 서비스
+├── asset/          # 자산 서비스
+├── datacollection/ # 데이터 수집
+├── gamification/   # 게이미피케이션
+├── monitoring/     # 모니터링 서비스
+├── portfolio/      # 포트폴리오 서비스
+├── transaction/    # 거래 서비스
+└── visualization/  # 시각화 서비스
+```
 
 ## 시작하기
 
 ### 요구사항
-
-- Go 1.24.0 이상
+- Go 1.24.0
+- Docker & Docker Compose
 - Make
-- Docker (선택사항)
 
-### 로컬 개발 환경 설정
-
+### 로컬 개발 환경
 ```bash
 # 저장소 클론
-git clone https://github.com/aske/go_fi_chart.git
+git clone https://github.com/yourusername/go_fi_chart.git
 cd go_fi_chart
 
-# 의존성 설치
-go mod download
-
-# 개발 도구 설치
+# 개발 환경 설정
 make setup-dev
 
 # 서비스 실행
-make run-services
-
-# 테스트 실행
-make test
+make run
 ```
 
-### 도커 환경 (선택사항)
-
+### 환경 변수
 ```bash
-# 이미지 빌드
-make docker-build
-
-# 컨테이너 실행
-make docker-run
+# 필수 환경 변수
+MONGODB_URI=mongodb://...    # MongoDB 연결 문자열
+POSTGRES_URI=postgres://...  # PostgreSQL 연결 문자열
+KAFKA_BROKERS=localhost:9092 # Kafka 브로커 주소
 ```
-
-## 프로젝트 구조
-
-```
-.
-├── docs/                    # 문서
-│   ├── architecture/       # 아키텍처 문서
-│   ├── development/       # 개발 가이드
-│   └── event-storming/    # 이벤트 스토밍 결과
-├── pkg/                    # 공유 도메인 모델
-│   └── domain/
-│       ├── events/        # 도메인 이벤트
-│       └── valueobjects/  # 값 객체
-└── services/              # 마이크로서비스
-├── asset/            # 자산 서비스
-├── portfolio/        # 포트폴리오 서비스
-├── transaction/      # 거래 서비스
-└── monitoring/       # 모니터링 서비스
-```
-
-## 도메인 모델링
-
-프로젝트는 다음과 같은 DDD 패턴을 적용합니다:
-
-- **애그리게잇**: 트랜잭션 일관성 경계 정의
-- **값 객체**: 불변성과 동등성 보장
-- **도메인 이벤트**: 도메인 변경사항 추적
-- **도메인 서비스**: 복잡한 도메인 로직 처리
-- **리포지토리**: 영속성 추상화
 
 ## 문서
 
-- [아키텍처 개요](docs/architecture/overview.md)
-- [도메인 모델](docs/architecture/domain.md)
+### 아키텍처
+- [도메인 모델](docs/architecture/domain-models.md)
+- [이벤트 기반 아키텍처](docs/architecture/event-driven.md)
+- [바운디드 컨텍스트](docs/architecture/context-mapping.md)
+
+### 서비스
+- [Asset 서비스](docs/services/asset/README.md)
+- [Portfolio 서비스](docs/services/portfolio/README.md)
+- [Transaction 서비스](docs/services/transaction/README.md)
+- [Monitoring 서비스](docs/services/monitoring/README.md)
+
+### 개발
 - [개발 컨벤션](docs/development/conventions.md)
 - [개발 워크플로우](docs/development/workflow.md)
 
