@@ -39,12 +39,14 @@ tidy:
 	@echo "의존성 정리 중..."
 	$(GO) mod tidy
 	@echo "pkg 의존성 정리 중..."
-	cd pkg && $(GO) mod tidy
+	(cd pkg && $(GO) mod tidy)
 	@echo "서비스 의존성 정리 중..."
 	@for service in $(SERVICES); do \
 		echo "의존성 정리: $$service"; \
-		cd services/$$service && $(GO) mod tidy && cd ../..; \
+		(cd services/$$service && $(GO) mod tidy); \
 	done
+	@echo "go work sync 실행..."
+	$(GO) work sync
 
 # 테스트
 .PHONY: test
