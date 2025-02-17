@@ -94,23 +94,14 @@ func (p *Portfolio) UpdateAssetWeight(assetID string, weight valueobjects.Percen
 
 // RemoveAsset 포트폴리오에서 자산을 제거합니다.
 func (p *Portfolio) RemoveAsset(assetID string) error {
-	found := false
-	newAssets := make([]PortfolioAsset, 0, len(p.Assets)-1)
-	for _, asset := range p.Assets {
-		if asset.AssetID != assetID {
-			newAssets = append(newAssets, asset)
-		} else {
-			found = true
+	for i, asset := range p.Assets {
+		if asset.AssetID == assetID {
+			p.Assets = append(p.Assets[:i], p.Assets[i+1:]...)
+			p.UpdatedAt = time.Now()
+			return nil
 		}
 	}
-
-	if !found {
-		return ErrAssetNotFound
-	}
-
-	p.Assets = newAssets
-	p.UpdatedAt = time.Now()
-	return nil
+	return ErrAssetNotFound
 }
 
 // Validate 포트폴리오의 유효성을 검증합니다.

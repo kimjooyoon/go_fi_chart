@@ -97,3 +97,36 @@ func (p *SimplePublisher) UnregisterHandler(handler EventHandler) error {
 
 	return nil
 }
+
+// Subscribe는 특정 타입의 이벤트를 구독합니다.
+func (p *SimplePublisher) Subscribe(eventType string, handler EventHandler) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.handlers[eventType] = append(p.handlers[eventType], handler)
+	return nil
+}
+
+// Unsubscribe는 특정 타입의 이벤트 구독을 취소합니다.
+func (p *SimplePublisher) Unsubscribe(eventType string, handler EventHandler) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if handlers, exists := p.handlers[eventType]; exists {
+		for i, h := range handlers {
+			if h == handler {
+				p.handlers[eventType] = append(handlers[:i], handlers[i+1:]...)
+				break
+			}
+		}
+	}
+	return nil
+}
+
+func (p *SimplePublisher) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.handlers = make(map[string][]EventHandler)
+	return nil
+}

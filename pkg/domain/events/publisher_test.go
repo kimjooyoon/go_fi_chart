@@ -90,3 +90,24 @@ func TestSimplePublisher_PublishWithNoHandlers(t *testing.T) {
 	err := publisher.Publish(context.Background(), event)
 	assert.NoError(t, err)
 }
+
+type TestEvent struct {
+	data string
+}
+
+func (e *TestEvent) Name() string {
+	return "test_event"
+}
+
+func TestEventPublisher_SimplePublish(t *testing.T) {
+	publisher := NewSimplePublisher()
+
+	handler := &mockHandler{eventType: "test_event"}
+	publisher.RegisterHandler(handler)
+
+	event := NewEvent("test_event", uuid.New(), "test.aggregate", 1, nil, nil)
+	err := publisher.Publish(context.Background(), event)
+
+	assert.NoError(t, err)
+	assert.True(t, handler.handled)
+}

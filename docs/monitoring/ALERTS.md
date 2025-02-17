@@ -14,12 +14,12 @@
 
 ```go
 type Alert struct {
-    ID        string
-    Level     AlertLevel
-    Source    string
-    Message   string
-    Timestamp time.Time
-    Metadata  map[string]string
+ID        string
+Level     AlertLevel
+Source    string
+Message   string
+Timestamp time.Time
+Metadata  map[string]string
 }
 ```
 
@@ -38,10 +38,10 @@ type Alert struct {
 type AlertLevel string
 
 const (
-    LevelInfo     AlertLevel = "INFO"
-    LevelWarning  AlertLevel = "WARNING"
-    LevelError    AlertLevel = "ERROR"
-    LevelCritical AlertLevel = "CRITICAL"
+LevelInfo     AlertLevel = "INFO"
+LevelWarning  AlertLevel = "WARNING"
+LevelError    AlertLevel = "ERROR"
+LevelCritical AlertLevel = "CRITICAL"
 )
 ```
 
@@ -56,7 +56,7 @@ const (
 
 ```go
 type Notifier interface {
-    Notify(ctx context.Context, alert Alert) error
+Notify(ctx context.Context, alert Alert) error
 }
 ```
 
@@ -89,13 +89,13 @@ type Notifier interface {
 각 컴포넌트는 다음과 같은 테스트를 포함합니다:
 
 1. 단위 테스트
-    - 알림 생성 및 전달 검증
-    - 이벤트 발행 검증
-    - 에러 처리 검증
+- 알림 생성 및 전달 검증
+- 이벤트 발행 검증
+- 에러 처리 검증
 
 2. 동시성 테스트
-    - 스레드 안전성 검증
-    - 핸들러 관리 검증
+- 스레드 안전성 검증
+- 핸들러 관리 검증
 
 ## 사용 예시
 
@@ -103,13 +103,13 @@ type Notifier interface {
 
 ```go
 alert := Alert{
-    ID:      "alert-1",
-    Level:   LevelWarning,
-    Source:  "system",
-    Message: "High CPU usage detected",
-    Metadata: map[string]string{
-        "cpu": "85%",
-    },
+ID:      "alert-1",
+Level:   LevelWarning,
+Source:  "system",
+Message: "High CPU usage detected",
+Metadata: map[string]string{
+"cpu": "85%",
+},
 }
 
 notifier := NewSimpleNotifier(publisher)

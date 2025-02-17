@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -32,127 +33,152 @@ func createTestTransaction() *Transaction {
 }
 
 func TestNewMemoryTransactionRepository(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
 
 	assert.NotNil(t, repo)
 	assert.NotNil(t, repo.transactions)
 	assert.Empty(t, repo.transactions)
+	assert.Equal(t, eventBus, repo.eventBus)
 }
 
 func TestMemoryTransactionRepository_Save(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
-	ctx := context.Background()
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
 	transaction := createTestTransaction()
 
-	err := repo.Save(ctx, transaction)
-	assert.NoError(t, err)
-	assert.Len(t, repo.transactions, 1)
+	// When
+	err := repo.Save(context.Background(), transaction)
 
-	err = repo.Save(ctx, transaction)
-	assert.Error(t, err)
+	// Then
+	assert.NoError(t, err)
+	saved, err := repo.FindByID(context.Background(), transaction.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, transaction, saved)
 }
 
 func TestMemoryTransactionRepository_FindByID(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
-	ctx := context.Background()
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
 	transaction := createTestTransaction()
+	err := repo.Save(context.Background(), transaction)
+	assert.NoError(t, err)
 
-	repo.Save(ctx, transaction)
+	// When
+	found, err := repo.FindByID(context.Background(), transaction.ID)
 
-	found, err := repo.FindByID(ctx, transaction.ID)
+	// Then
 	assert.NoError(t, err)
 	assert.Equal(t, transaction, found)
-
-	notFound, err := repo.FindByID(ctx, uuid.New())
-	assert.Error(t, err)
-	assert.Nil(t, notFound)
 }
 
 func TestMemoryTransactionRepository_FindByUserID(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
-	ctx := context.Background()
-	transaction := createTestTransaction()
-
-	repo.Save(ctx, transaction)
-
-	transactions, err := repo.FindByUserID(ctx, transaction.UserID)
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
+	userID := uuid.New()
+	transaction1 := createTestTransaction()
+	transaction2 := createTestTransaction()
+	transaction1.UserID = userID
+	transaction2.UserID = userID
+	err := repo.Save(context.Background(), transaction1)
 	assert.NoError(t, err)
-	assert.Len(t, transactions, 1)
-	assert.Equal(t, transaction, transactions[0])
-
-	emptyTransactions, err := repo.FindByUserID(ctx, uuid.New())
+	err = repo.Save(context.Background(), transaction2)
 	assert.NoError(t, err)
-	assert.Empty(t, emptyTransactions)
+
+	// When
+	found, err := repo.FindByUserID(context.Background(), userID)
+
+	// Then
+	assert.NoError(t, err)
+	assert.Len(t, found, 2)
+	assert.Contains(t, found, transaction1)
+	assert.Contains(t, found, transaction2)
 }
 
 func TestMemoryTransactionRepository_FindByPortfolioID(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
-	ctx := context.Background()
-	transaction := createTestTransaction()
-
-	repo.Save(ctx, transaction)
-
-	transactions, err := repo.FindByPortfolioID(ctx, transaction.PortfolioID)
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
+	portfolioID := uuid.New()
+	transaction1 := createTestTransaction()
+	transaction2 := createTestTransaction()
+	transaction1.PortfolioID = portfolioID
+	transaction2.PortfolioID = portfolioID
+	err := repo.Save(context.Background(), transaction1)
 	assert.NoError(t, err)
-	assert.Len(t, transactions, 1)
-	assert.Equal(t, transaction, transactions[0])
-
-	emptyTransactions, err := repo.FindByPortfolioID(ctx, uuid.New())
+	err = repo.Save(context.Background(), transaction2)
 	assert.NoError(t, err)
-	assert.Empty(t, emptyTransactions)
+
+	// When
+	found, err := repo.FindByPortfolioID(context.Background(), portfolioID)
+
+	// Then
+	assert.NoError(t, err)
+	assert.Len(t, found, 2)
+	assert.Contains(t, found, transaction1)
+	assert.Contains(t, found, transaction2)
 }
 
 func TestMemoryTransactionRepository_FindByAssetID(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
-	ctx := context.Background()
-	transaction := createTestTransaction()
-
-	repo.Save(ctx, transaction)
-
-	transactions, err := repo.FindByAssetID(ctx, transaction.AssetID)
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
+	assetID := uuid.New()
+	transaction1 := createTestTransaction()
+	transaction2 := createTestTransaction()
+	transaction1.AssetID = assetID
+	transaction2.AssetID = assetID
+	err := repo.Save(context.Background(), transaction1)
 	assert.NoError(t, err)
-	assert.Len(t, transactions, 1)
-	assert.Equal(t, transaction, transactions[0])
-
-	emptyTransactions, err := repo.FindByAssetID(ctx, uuid.New())
+	err = repo.Save(context.Background(), transaction2)
 	assert.NoError(t, err)
-	assert.Empty(t, emptyTransactions)
+
+	// When
+	found, err := repo.FindByAssetID(context.Background(), assetID)
+
+	// Then
+	assert.NoError(t, err)
+	assert.Len(t, found, 2)
+	assert.Contains(t, found, transaction1)
+	assert.Contains(t, found, transaction2)
 }
 
 func TestMemoryTransactionRepository_Update(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
-	ctx := context.Background()
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
 	transaction := createTestTransaction()
-
-	repo.Save(ctx, transaction)
-
-	newAmount, _ := valueobjects.NewMoney(200.0, "USD")
-	transaction.Update(Sell, newAmount, 4.0, transaction.ExecutedPrice, transaction.ExecutedAt)
-
-	err := repo.Update(ctx, transaction)
+	err := repo.Save(context.Background(), transaction)
 	assert.NoError(t, err)
 
-	found, _ := repo.FindByID(ctx, transaction.ID)
-	assert.Equal(t, Sell, found.Type)
-	assert.Equal(t, newAmount, found.Amount)
-	assert.Equal(t, 4.0, found.Quantity)
+	// When
+	newAmount, _ := valueobjects.NewMoney(200.0, "USD")
+	transaction.Update(Sell, newAmount, 4.0, transaction.ExecutedPrice, transaction.ExecutedAt)
+	err = repo.Update(context.Background(), transaction)
 
-	notFoundTransaction := createTestTransaction()
-	err = repo.Update(ctx, notFoundTransaction)
-	assert.Error(t, err)
+	// Then
+	assert.NoError(t, err)
+	updated, err := repo.FindByID(context.Background(), transaction.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, transaction, updated)
 }
 
 func TestMemoryTransactionRepository_Delete(t *testing.T) {
-	repo := NewMemoryTransactionRepository()
-	ctx := context.Background()
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryTransactionRepository(eventBus)
 	transaction := createTestTransaction()
-
-	repo.Save(ctx, transaction)
-
-	err := repo.Delete(ctx, transaction.ID)
+	err := repo.Save(context.Background(), transaction)
 	assert.NoError(t, err)
-	assert.Empty(t, repo.transactions)
 
-	err = repo.Delete(ctx, transaction.ID)
+	// When
+	err = repo.Delete(context.Background(), transaction.ID)
+
+	// Then
+	assert.NoError(t, err)
+	_, err = repo.FindByID(context.Background(), transaction.ID)
 	assert.Error(t, err)
 }

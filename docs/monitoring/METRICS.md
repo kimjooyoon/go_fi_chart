@@ -46,7 +46,7 @@ Timestamp time.Time         // 측정 시간
 
 ```go
 type Collector interface {
-    Collect(ctx context.Context) ([]Metric, error)
+Collect(ctx context.Context) ([]Metric, error)
 AddMetric(metric Metric) error
 Reset()
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aske/go_fi_chart/services/asset/internal/api"
+	"github.com/aske/go_fi_chart/services/asset/internal/domain"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -32,7 +34,7 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	// 핸들러 설정
-	handler := api.NewHandler()
+	handler := api.NewHandler(domain.NewMemoryAssetRepository())
 	handler.RegisterRoutes(r)
 
 	// 서버 종료 시그널 처리
@@ -52,7 +54,7 @@ func main() {
 
 	// 서버 시작
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("서버 시작 실패: %v", err)
 		}
 	}()

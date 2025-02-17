@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/google/uuid"
 )
 
@@ -13,52 +14,53 @@ var ErrTransactionNotFound = errors.New("transaction not found")
 
 // MemoryTransactionRepository는 인메모리 거래 저장소 구현입니다
 type MemoryTransactionRepository struct {
-	transactions map[uuid.UUID]*Transaction
+	transactions map[string]*Transaction
+	eventBus     events.EventBus
 	mu           sync.RWMutex
 }
 
 // NewMemoryTransactionRepository는 새로운 인메모리 거래 저장소를 생성합니다
-func NewMemoryTransactionRepository() *MemoryTransactionRepository {
+func NewMemoryTransactionRepository(eventBus events.EventBus) *MemoryTransactionRepository {
 	return &MemoryTransactionRepository{
-		transactions: make(map[uuid.UUID]*Transaction),
+		transactions: make(map[string]*Transaction),
+		eventBus:     eventBus,
 	}
 }
 
 // Save는 새로운 거래를 저장합니다
-func (r *MemoryTransactionRepository) Save(_ context.Context, transaction *Transaction) error {
+func (r *MemoryTransactionRepository) Save(ctx context.Context, transaction *Transaction) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.transactions[transaction.ID]; exists {
-		return fmt.Errorf("transaction with ID %s already exists", transaction.ID)
+	if _, exists := r.transactions[transaction.ID.String()]; exists {
+		return fmt.Errorf("transaction already exists: %s", transaction.ID)
 	}
 
-	r.transactions[transaction.ID] = transaction
+	r.transactions[transaction.ID.String()] = transaction
 	return nil
 }
 
 // FindByID는 ID로 거래를 조회합니다
-func (r *MemoryTransactionRepository) FindByID(_ context.Context, id uuid.UUID) (*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByID(ctx context.Context, id uuid.UUID) (*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	transaction, exists := r.transactions[id]
-	if !exists {
-		return nil, fmt.Errorf("transaction with ID %s not found", id)
+	if transaction, exists := r.transactions[id.String()]; exists {
+		return transaction, nil
 	}
 
-	return transaction, nil
+	return nil, fmt.Errorf("transaction not found: %s", id)
 }
 
 // FindByUserID는 사용자 ID로 거래 목록을 조회합니다
-func (r *MemoryTransactionRepository) FindByUserID(_ context.Context, userID uuid.UUID) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var transactions []*Transaction
-	for _, t := range r.transactions {
-		if t.UserID == userID {
-			transactions = append(transactions, t)
+	for _, transaction := range r.transactions {
+		if transaction.UserID.String() == userID.String() {
+			transactions = append(transactions, transaction)
 		}
 	}
 
@@ -66,14 +68,14 @@ func (r *MemoryTransactionRepository) FindByUserID(_ context.Context, userID uui
 }
 
 // FindByPortfolioID는 포트폴리오 ID로 거래 목록을 조회합니다
-func (r *MemoryTransactionRepository) FindByPortfolioID(_ context.Context, portfolioID uuid.UUID) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByPortfolioID(ctx context.Context, portfolioID uuid.UUID) ([]*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var transactions []*Transaction
-	for _, t := range r.transactions {
-		if t.PortfolioID == portfolioID {
-			transactions = append(transactions, t)
+	for _, transaction := range r.transactions {
+		if transaction.PortfolioID.String() == portfolioID.String() {
+			transactions = append(transactions, transaction)
 		}
 	}
 
@@ -81,14 +83,14 @@ func (r *MemoryTransactionRepository) FindByPortfolioID(_ context.Context, portf
 }
 
 // FindByAssetID는 자산 ID로 거래 목록을 조회합니다
-func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID uuid.UUID) ([]*Transaction, error) {
+func (r *MemoryTransactionRepository) FindByAssetID(ctx context.Context, assetID uuid.UUID) ([]*Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var transactions []*Transaction
-	for _, t := range r.transactions {
-		if t.AssetID == assetID {
-			transactions = append(transactions, t)
+	for _, transaction := range r.transactions {
+		if transaction.AssetID.String() == assetID.String() {
+			transactions = append(transactions, transaction)
 		}
 	}
 
@@ -96,27 +98,27 @@ func (r *MemoryTransactionRepository) FindByAssetID(_ context.Context, assetID u
 }
 
 // Update는 기존 거래를 업데이트합니다
-func (r *MemoryTransactionRepository) Update(_ context.Context, transaction *Transaction) error {
+func (r *MemoryTransactionRepository) Update(ctx context.Context, transaction *Transaction) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.transactions[transaction.ID]; !exists {
-		return fmt.Errorf("transaction with ID %s not found", transaction.ID)
+	if _, exists := r.transactions[transaction.ID.String()]; !exists {
+		return fmt.Errorf("transaction not found: %s", transaction.ID)
 	}
 
-	r.transactions[transaction.ID] = transaction
+	r.transactions[transaction.ID.String()] = transaction
 	return nil
 }
 
 // Delete는 거래를 삭제합니다
-func (r *MemoryTransactionRepository) Delete(_ context.Context, id uuid.UUID) error {
+func (r *MemoryTransactionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.transactions[id]; !exists {
-		return ErrTransactionNotFound
+	if _, exists := r.transactions[id.String()]; !exists {
+		return fmt.Errorf("transaction not found: %s", id)
 	}
 
-	delete(r.transactions, id)
+	delete(r.transactions, id.String())
 	return nil
 }

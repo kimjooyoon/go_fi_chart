@@ -1,73 +1,114 @@
 package github
 
 import (
+	"errors"
 	"time"
 
-	"github.com/aske/go_fi_chart/services/monitoring/metrics/domain"
+	"github.com/aske/go_fi_chart/services/monitoring/internal/domain"
 )
 
-// ActionStatus GitHub 액션의 상태를 나타냅니다.
-type ActionStatus string
+// MetricType은 GitHub 메트릭의 타입을 나타냅니다.
+type MetricType string
 
 const (
-	ActionStatusSuccess    ActionStatus = "success"
-	ActionStatusFailure    ActionStatus = "failure"
-	ActionStatusInProgress ActionStatus = "in_progress"
+	// MetricTypeStars 스타 수 메트릭
+	MetricTypeStars MetricType = "STARS"
+	// MetricTypeForks 포크 수 메트릭
+	MetricTypeForks MetricType = "FORKS"
+	// MetricTypeIssues 이슈 수 메트릭
+	MetricTypeIssues MetricType = "ISSUES"
+	// MetricTypePullRequests PR 수 메트릭
+	MetricTypePullRequests MetricType = "PULL_REQUESTS"
+	// MetricTypeContributors 기여자 수 메트릭
+	MetricTypeContributors MetricType = "CONTRIBUTORS"
 )
 
-// ActionMetric GitHub Actions 실행 메트릭을 나타냅니다.
-type ActionMetric struct {
-	WorkflowName string
-	Status       ActionStatus
-	Duration     time.Duration
-	StartedAt    time.Time
-	FinishedAt   time.Time
+// Metric은 GitHub 메트릭을 나타냅니다.
+type Metric struct {
+	repository string
+	metricType MetricType
+	value      float64
+	timestamp  time.Time
 }
 
-// NewActionMetric 새로운 액션 메트릭을 생성합니다.
-func NewActionMetric(name string, status ActionStatus, duration time.Duration) ActionMetric {
-	now := time.Now()
-	return ActionMetric{
-		WorkflowName: name,
-		Status:       status,
-		Duration:     duration,
-		StartedAt:    now.Add(-duration),
-		FinishedAt:   now,
+// NewMetric은 새로운 GitHub 메트릭을 생성합니다.
+func NewMetric(repository string, metricType MetricType, value float64, timestamp time.Time) *Metric {
+	return &Metric{
+		repository: repository,
+		metricType: metricType,
+		value:      value,
+		timestamp:  timestamp,
 	}
 }
 
-// ToMetric 액션 메트릭을 일반 메트릭으로 변환합니다.
-func (m ActionMetric) ToMetric() domain.Metric {
-	var value float64
-	switch m.Status {
-	case ActionStatusSuccess:
-		value = 1
-	case ActionStatusFailure:
-		value = 0
-	case ActionStatusInProgress:
-		value = 2
+// Repository는 메트릭이 속한 레포지토리를 반환합니다.
+func (m *Metric) Repository() string {
+	return m.repository
+}
+
+// MetricType은 메트릭의 타입을 반환합니다.
+func (m *Metric) MetricType() MetricType {
+	return m.metricType
+}
+
+// Value는 메트릭의 값을 반환합니다.
+func (m *Metric) Value() float64 {
+	return m.value
+}
+
+// Timestamp는 메트릭의 타임스탬프를 반환합니다.
+func (m *Metric) Timestamp() time.Time {
+	return m.timestamp
+}
+
+// Validate는 메트릭의 유효성을 검사합니다.
+func (m *Metric) Validate() error {
+	if m.repository == "" {
+		return ErrInvalidRepository
+	}
+	if !isValidMetricType(m.metricType) {
+		return ErrInvalidMetricType
+	}
+	return nil
+}
+
+// ToDomain은 GitHub 메트릭을 도메인 메트릭으로 변환합니다.
+func (m *Metric) ToDomain() *domain.Metric {
+	labels := map[string]string{
+		"repository": m.repository,
+		"type":       string(m.metricType),
+	}
+	return domain.NewMetric(
+		m.repository+"."+string(m.metricType),
+		domain.MetricTypeGitHub,
+		domain.NewMetricValue(m.value, labels),
+		m.timestamp,
+	)
+}
+
+// isValidMetricType는 메트릭 타입의 유효성을 검사합니다.
+func isValidMetricType(t MetricType) bool {
+	switch t {
+	case MetricTypeStars, MetricTypeForks, MetricTypeIssues, MetricTypePullRequests, MetricTypeContributors:
+		return true
 	default:
-		value = -1
+		return false
 	}
-
-	return domain.NewBaseMetric(
-		m.WorkflowName,
-		domain.TypeGauge,
-		domain.NewValue(value, map[string]string{
-			"status": string(m.Status),
-		}),
-		"GitHub 액션 실행 상태",
-	)
 }
 
-// ToDurationMetric 액션 실행 시간 메트릭을 생성합니다.
-func (m ActionMetric) ToDurationMetric() domain.Metric {
-	return domain.NewBaseMetric(
-		m.WorkflowName+"_duration",
-		domain.TypeGauge,
-		domain.NewValue(m.Duration.Seconds(), map[string]string{
-			"action": m.WorkflowName,
-		}),
-		"GitHub 액션 실행 시간 (초)",
-	)
+// String은 메트릭 타입의 문자열 표현을 반환합니다.
+func (t MetricType) String() string {
+	return string(t)
 }
+
+// IsValid는 메트릭 타입의 유효성을 검사합니다.
+func (t MetricType) IsValid() bool {
+	return isValidMetricType(t)
+}
+
+var (
+	// ErrInvalidRepository 잘못된 레포지토리 에러
+	ErrInvalidRepository = errors.New("invalid repository")
+	// ErrInvalidMetricType 잘못된 메트릭 타입 에러
+	ErrInvalidMetricType = errors.New("invalid metric type")
+)

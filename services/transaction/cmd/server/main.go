@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/services/transaction/internal/api"
+	"github.com/aske/go_fi_chart/services/transaction/internal/domain"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -31,8 +33,11 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	eventBus := events.NewSimplePublisher()
+
 	// 핸들러 설정
-	handler := api.NewHandler()
+	repo := domain.NewMemoryTransactionRepository(eventBus)
+	handler := api.NewHandler(repo)
 	handler.RegisterRoutes(r)
 
 	// 서버 종료 시그널 처리
@@ -64,5 +69,9 @@ func main() {
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("서버 종료 중 오류 발생: %v", err)
+	}
+
+	if err := eventBus.Close(); err != nil {
+		log.Printf("Error during event bus shutdown: %v", err)
 	}
 }

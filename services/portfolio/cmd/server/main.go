@@ -10,14 +10,18 @@ import (
 	"syscall"
 	"time"
 
+	"log/slog"
+
 	"github.com/aske/go_fi_chart/services/portfolio/internal/api"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/aske/go_fi_chart/services/portfolio/internal/domain"
+	"github.com/gorilla/mux"
 )
 
 func main() {
 	serverCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	// 환경 변수 로드
 	port := os.Getenv("PORT")
@@ -26,13 +30,14 @@ func main() {
 	}
 
 	// 라우터 설정
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
+	r := mux.NewRouter()
+	r.Use(loggingMiddleware)
+	r.Use(recoveryMiddleware)
+	r.Use(timeoutMiddleware)
 
 	// 핸들러 설정
-	handler := api.NewHandler()
+	portfolioRepo := domain.NewMemoryPortfolioRepository()
+	handler := api.NewHandler(portfolioRepo, logger)
 	handler.RegisterRoutes(r)
 
 	// 서버 종료 시그널 처리
@@ -51,18 +56,43 @@ func main() {
 	}
 
 	// 서버 시작
+	logger.Info("starting server", "port", fmt.Sprintf(":%s", port))
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("서버 시작 실패: %v", err)
+			logger.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	// 서버 종료 대기
 	<-serverCtx.Done()
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer shutdownCancel() // shutdown context의 cancel 함수를 호출합니다.
+	defer shutdownCancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("서버 종료 중 오류 발생: %v", err)
 	}
+}
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func recoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("패닉 발생: %v", err)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+func timeoutMiddleware(next http.Handler) http.Handler {
+	return http.TimeoutHandler(next, 60*time.Second, "시간 초과")
 }

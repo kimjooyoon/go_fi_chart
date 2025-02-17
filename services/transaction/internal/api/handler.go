@@ -18,9 +18,9 @@ type Handler struct {
 }
 
 // NewHandler는 새로운 Handler를 생성합니다
-func NewHandler() *Handler {
+func NewHandler(repository domain.TransactionRepository) *Handler {
 	return &Handler{
-		repository: domain.NewMemoryTransactionRepository(),
+		repository: repository,
 	}
 }
 
@@ -66,43 +66,48 @@ type TransactionResponse struct {
 func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	var req createTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	if req.UserID == "" || req.PortfolioID == "" || req.AssetID == "" {
+		http.Error(w, "missing required fields", http.StatusBadRequest)
 		return
 	}
 
 	userID, err := uuid.Parse(req.UserID)
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		http.Error(w, "invalid user ID", http.StatusBadRequest)
 		return
 	}
 
 	portfolioID, err := uuid.Parse(req.PortfolioID)
 	if err != nil {
-		http.Error(w, "Invalid portfolio ID", http.StatusBadRequest)
+		http.Error(w, "invalid portfolio ID", http.StatusBadRequest)
 		return
 	}
 
 	assetID, err := uuid.Parse(req.AssetID)
 	if err != nil {
-		http.Error(w, "Invalid asset ID", http.StatusBadRequest)
+		http.Error(w, "invalid asset ID", http.StatusBadRequest)
 		return
 	}
 
 	executedAt, err := time.Parse(time.RFC3339, req.ExecutedAt)
 	if err != nil {
-		http.Error(w, "Invalid executed at time", http.StatusBadRequest)
+		http.Error(w, "invalid executed at time", http.StatusBadRequest)
 		return
 	}
 
 	amount, err := valueobjects.NewMoney(req.Amount, "USD")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid amount", http.StatusBadRequest)
 		return
 	}
 
 	executedPrice, err := valueobjects.NewMoney(req.ExecutedPrice, "USD")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid executed price", http.StatusBadRequest)
 		return
 	}
 
@@ -126,6 +131,7 @@ func (h *Handler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(toTransactionResponse(transaction)); err != nil {
 		log.Printf("Error encoding response: %v", err)
@@ -142,10 +148,11 @@ func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 
 	transaction, err := h.repository.FindByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, "transaction not found", http.StatusNotFound)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(toTransactionResponse(transaction)); err != nil {
 		log.Printf("Error encoding response: %v", err)
 	}
@@ -196,14 +203,24 @@ func (h *Handler) ListUserTransactions(w http.ResponseWriter, r *http.Request) {
 
 // ListPortfolioTransactions은 포트폴리오의 모든 거래를 조회합니다
 func (h *Handler) ListPortfolioTransactions(w http.ResponseWriter, r *http.Request) {
-	portfolioID, err := uuid.Parse(chi.URLParam(r, "portfolioID"))
-	if err != nil {
-		http.Error(w, "Invalid portfolio ID", http.StatusBadRequest)
+	portfolioID := chi.URLParam(r, "portfolioID")
+	if portfolioID == "" {
+		http.Error(w, "portfolio ID is required", http.StatusBadRequest)
 		return
 	}
 
-	transactions, err := h.repository.FindByPortfolioID(r.Context(), portfolioID)
+	id, err := uuid.Parse(portfolioID)
 	if err != nil {
+		http.Error(w, "invalid portfolio ID format", http.StatusBadRequest)
+		return
+	}
+
+	transactions, err := h.repository.FindByPortfolioID(r.Context(), id)
+	if err != nil {
+		if err == domain.ErrTransactionNotFound {
+			http.Error(w, "transactions not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -213,6 +230,7 @@ func (h *Handler) ListPortfolioTransactions(w http.ResponseWriter, r *http.Reque
 		response[i] = toTransactionResponse(t)
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response: %v", err)
 	}
@@ -306,14 +324,22 @@ func (h *Handler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	transaction, err := h.repository.FindByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	transaction.MarkAsDeleted()
 	if err := h.repository.Delete(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
+// toTransactionResponse는 도메인 모델을 응답 모델로 변환합니다
 func toTransactionResponse(t *domain.Transaction) TransactionResponse {
 	return TransactionResponse{
 		ID:            t.ID.String(),

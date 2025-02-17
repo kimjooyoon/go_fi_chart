@@ -2,11 +2,13 @@ package infrastructure
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/aske/go_fi_chart/services/asset/internal/domain"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -14,10 +16,17 @@ import (
 // MockEventBus는 테스트용 이벤트 버스입니다.
 type MockEventBus struct {
 	mock.Mock
+	publishedEvents []events.Event
+	mu              sync.Mutex
 }
 
 func (m *MockEventBus) Publish(ctx context.Context, event events.Event) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	args := m.Called(ctx, event)
+	if args.Error(0) == nil {
+		m.publishedEvents = append(m.publishedEvents, event)
+	}
 	return args.Error(0)
 }
 
@@ -181,31 +190,141 @@ func TestMemoryAssetRepository_FindByUserID(t *testing.T) {
 }
 
 func TestMemoryAssetRepository_FindByType(t *testing.T) {
-	// 준비
-	eventBus := new(MockEventBus)
-	repo := NewMemoryAssetRepository(eventBus)
+	// Given
 	ctx := context.Background()
+	eventBus := &MockEventBus{}
+	eventBus.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	repo := NewMemoryAssetRepository(eventBus)
 
-	amount1, _ := valueobjects.NewMoney(1000.0, "USD")
-	asset1 := domain.NewAsset("user-1", domain.Stock, "자산 1", amount1)
+	// 여러 타입의 자산 생성
+	stockAmount, _ := valueobjects.NewMoney(1000.0, "USD")
+	bondAmount, _ := valueobjects.NewMoney(2000.0, "USD")
 
-	amount2, _ := valueobjects.NewMoney(2000.0, "USD")
-	asset2 := domain.NewAsset("user-2", domain.Stock, "자산 2", amount2)
+	stockAsset := domain.NewAsset("user-123", domain.Stock, "Stock Asset", stockAmount)
+	bondAsset := domain.NewAsset("user-123", domain.Bond, "Bond Asset", bondAmount)
 
-	amount3, _ := valueobjects.NewMoney(3000.0, "USD")
-	asset3 := domain.NewAsset("user-1", domain.Bond, "자산 3", amount3)
-
-	eventBus.On("Publish", ctx, mock.AnythingOfType("*events.BaseEvent")).Return(nil)
-	repo.Save(ctx, asset1)
-	repo.Save(ctx, asset2)
-	repo.Save(ctx, asset3)
-
-	// 실행
-	assets, err := repo.FindByType(ctx, domain.Stock)
-
-	// 검증
+	err := repo.Save(ctx, stockAsset)
 	assert.NoError(t, err)
-	assert.Len(t, assets, 2)
-	assert.Contains(t, assets, asset1)
-	assert.Contains(t, assets, asset2)
+	err = repo.Save(ctx, bondAsset)
+	assert.NoError(t, err)
+
+	// When
+	stockAssets, err := repo.FindByType(ctx, domain.Stock)
+	assert.NoError(t, err)
+	bondAssets, err := repo.FindByType(ctx, domain.Bond)
+	assert.NoError(t, err)
+
+	// Then
+	assert.Len(t, stockAssets, 1)
+	assert.Len(t, bondAssets, 1)
+	assert.Equal(t, stockAsset.ID, stockAssets[0].ID)
+	assert.Equal(t, bondAsset.ID, bondAssets[0].ID)
+}
+
+func TestMemoryAssetRepository_ConcurrentOperations(t *testing.T) {
+	// Given
+	ctx := context.Background()
+	eventBus := &MockEventBus{}
+	eventBus.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	repo := NewMemoryAssetRepository(eventBus)
+
+	// 동시에 여러 자산을 저장
+	var wg sync.WaitGroup
+	assetCount := 100
+	wg.Add(assetCount)
+
+	// When
+	for i := 0; i < assetCount; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			amount, _ := valueobjects.NewMoney(float64(1000+idx), "USD")
+			asset := domain.NewAsset("user-123", domain.Stock, "Test Asset", amount)
+			err := repo.Save(ctx, asset)
+			assert.NoError(t, err)
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Then
+	assets, err := repo.FindByUserID(ctx, "user-123")
+	assert.NoError(t, err)
+	assert.Len(t, assets, assetCount)
+
+	// 이벤트 발행 검증
+	eventBus.mu.Lock()
+	assert.Len(t, eventBus.publishedEvents, assetCount)
+	eventBus.mu.Unlock()
+}
+
+func TestMemoryAssetRepository_ConcurrentUpdates(t *testing.T) {
+	// Given
+	ctx := context.Background()
+	eventBus := &MockEventBus{}
+	eventBus.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	repo := NewMemoryAssetRepository(eventBus)
+
+	// 초기 자산 생성
+	amount, _ := valueobjects.NewMoney(1000.0, "USD")
+	asset := domain.NewAsset("user-123", domain.Stock, "Test Asset", amount)
+	err := repo.Save(ctx, asset)
+	assert.NoError(t, err)
+
+	// 동시에 여러 번 업데이트
+	var wg sync.WaitGroup
+	updateCount := 100
+	wg.Add(updateCount)
+
+	// When
+	for i := 0; i < updateCount; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			newAmount, _ := valueobjects.NewMoney(float64(1000+idx), "USD")
+			asset.UpdateAmount(newAmount)
+			err := repo.Update(ctx, asset)
+			assert.NoError(t, err)
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Then
+	updatedAsset, err := repo.FindByID(ctx, asset.ID)
+	assert.NoError(t, err)
+	assert.NotNil(t, updatedAsset)
+
+	// 이벤트 발행 검증
+	eventBus.mu.Lock()
+	assert.True(t, len(eventBus.publishedEvents) > updateCount) // 초기 생성 이벤트 + 업데이트 이벤트
+	eventBus.mu.Unlock()
+}
+
+func TestMemoryAssetRepository_DeleteWithConcurrentAccess(t *testing.T) {
+	// Given
+	eventBus := events.NewSimplePublisher()
+	repo := NewMemoryAssetRepository(eventBus)
+
+	amount, _ := valueobjects.NewMoney(100.0, "USD")
+	asset := domain.NewAsset(uuid.New().String(), domain.Stock, "Test Asset", amount)
+
+	err := repo.Save(context.Background(), asset)
+	assert.NoError(t, err)
+
+	// When
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := repo.Delete(context.Background(), asset.ID)
+			if err != nil {
+				assert.ErrorContains(t, err, domain.ErrAssetNotFound.Error())
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Then
+	_, err = repo.FindByID(context.Background(), asset.ID)
+	assert.ErrorContains(t, err, domain.ErrAssetNotFound.Error())
 }

@@ -3,10 +3,10 @@
 ## 1. 시스템 아키텍처
 ### 백엔드 구조 (Go)
 - Clean Architecture 적용
-  - Domain Layer: 핵심 비즈니스 로직
-  - UseCase Layer: 애플리케이션 비즈니스 로직
-  - Interface Layer: 외부 인터페이스 (HTTP, gRPC)
-  - Infrastructure Layer: 데이터베이스, 외부 서비스 연동
+- Domain Layer: 핵심 비즈니스 로직
+- UseCase Layer: 애플리케이션 비즈니스 로직
+- Interface Layer: 외부 인터페이스 (HTTP, gRPC)
+- Infrastructure Layer: 데이터베이스, 외부 서비스 연동
 
 ### 주요 기술 스택
 - 웹 프레임워크: Echo or Gin

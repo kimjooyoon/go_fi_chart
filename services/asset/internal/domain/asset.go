@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/aske/go_fi_chart/pkg/domain/events"
@@ -30,6 +31,7 @@ type Asset struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	events    []events.Event
+	mu        sync.RWMutex
 }
 
 // NewAsset 새로운 자산을 생성합니다.
@@ -46,12 +48,17 @@ func NewAsset(userID string, assetType AssetType, name string, amount valueobjec
 		events:    make([]events.Event, 0),
 	}
 
+	asset.mu.Lock()
 	asset.events = append(asset.events, NewAssetCreatedEvent(asset))
+	asset.mu.Unlock()
 	return asset
 }
 
 // Update 자산 정보를 업데이트합니다.
 func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Money) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	prevAmount := a.Amount
 	a.Name = name
 	a.Type = assetType
@@ -66,6 +73,9 @@ func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Mon
 
 // UpdateAmount 자산의 금액을 업데이트합니다.
 func (a *Asset) UpdateAmount(amount valueobjects.Money) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	if a.Amount.Equals(amount) {
 		return
 	}
@@ -79,16 +89,24 @@ func (a *Asset) UpdateAmount(amount valueobjects.Money) {
 
 // MarkAsDeleted 자산을 삭제 상태로 표시합니다.
 func (a *Asset) MarkAsDeleted() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.events = append(a.events, NewAssetDeletedEvent(a))
 }
 
 // Events 발생한 이벤트 목록을 반환합니다.
 func (a *Asset) Events() []events.Event {
-	return a.events
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	events := make([]events.Event, len(a.events))
+	copy(events, a.events)
+	return events
 }
 
 // ClearEvents 이벤트 목록을 초기화합니다.
 func (a *Asset) ClearEvents() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.events = make([]events.Event, 0)
 }
 
@@ -127,4 +145,13 @@ type AssetRepository interface {
 	Delete(ctx context.Context, id string) error
 	FindByUserID(ctx context.Context, userID string) ([]*Asset, error)
 	FindByType(ctx context.Context, assetType AssetType) ([]*Asset, error)
+}
+
+func IsValidAssetType(assetType AssetType) bool {
+	switch assetType {
+	case Stock, Bond, Cash, RealEstate, Crypto:
+		return true
+	default:
+		return false
+	}
 }

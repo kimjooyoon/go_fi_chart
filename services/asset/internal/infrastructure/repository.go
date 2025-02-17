@@ -26,17 +26,19 @@ func NewMemoryAssetRepository(eventBus events.EventBus) *MemoryAssetRepository {
 
 // Save는 자산을 저장합니다.
 func (r *MemoryAssetRepository) Save(ctx context.Context, asset *domain.Asset) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	events := asset.Events()
 
+	r.mu.Lock()
 	if _, exists := r.assets[asset.ID]; exists {
+		r.mu.Unlock()
 		return fmt.Errorf("asset already exists: %s", asset.ID)
 	}
 
 	r.assets[asset.ID] = asset
+	r.mu.Unlock()
 
-	// 이벤트 발행
-	for _, event := range asset.Events() {
+	// 락 해제 후 이벤트 발행
+	for _, event := range events {
 		if err := r.eventBus.Publish(ctx, event); err != nil {
 			return fmt.Errorf("failed to publish event: %w", err)
 		}
@@ -47,7 +49,7 @@ func (r *MemoryAssetRepository) Save(ctx context.Context, asset *domain.Asset) e
 }
 
 // FindByID는 ID로 자산을 조회합니다.
-func (r *MemoryAssetRepository) FindByID(ctx context.Context, id string) (*domain.Asset, error) {
+func (r *MemoryAssetRepository) FindByID(_ context.Context, id string) (*domain.Asset, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -61,17 +63,19 @@ func (r *MemoryAssetRepository) FindByID(ctx context.Context, id string) (*domai
 
 // Update는 자산을 업데이트합니다.
 func (r *MemoryAssetRepository) Update(ctx context.Context, asset *domain.Asset) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	events := asset.Events()
 
+	r.mu.Lock()
 	if _, exists := r.assets[asset.ID]; !exists {
+		r.mu.Unlock()
 		return fmt.Errorf("asset not found: %s", asset.ID)
 	}
 
 	r.assets[asset.ID] = asset
+	r.mu.Unlock()
 
-	// 이벤트 발행
-	for _, event := range asset.Events() {
+	// 락 해제 후 이벤트 발행
+	for _, event := range events {
 		if err := r.eventBus.Publish(ctx, event); err != nil {
 			return fmt.Errorf("failed to publish event: %w", err)
 		}
@@ -88,25 +92,24 @@ func (r *MemoryAssetRepository) Delete(ctx context.Context, id string) error {
 
 	asset, exists := r.assets[id]
 	if !exists {
-		return fmt.Errorf("asset not found: %s", id)
+		return fmt.Errorf("%w: %s", domain.ErrAssetNotFound, id)
 	}
 
 	asset.MarkAsDeleted()
+	delete(r.assets, id)
 
 	// 이벤트 발행
 	for _, event := range asset.Events() {
 		if err := r.eventBus.Publish(ctx, event); err != nil {
-			return fmt.Errorf("failed to publish event: %w", err)
+			return fmt.Errorf("이벤트 발행 실패: %w", err)
 		}
 	}
-	asset.ClearEvents()
 
-	delete(r.assets, id)
 	return nil
 }
 
 // FindByUserID는 사용자 ID로 자산 목록을 조회합니다.
-func (r *MemoryAssetRepository) FindByUserID(ctx context.Context, userID string) ([]*domain.Asset, error) {
+func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*domain.Asset, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -121,7 +124,7 @@ func (r *MemoryAssetRepository) FindByUserID(ctx context.Context, userID string)
 }
 
 // FindByType는 자산 유형으로 자산 목록을 조회합니다.
-func (r *MemoryAssetRepository) FindByType(ctx context.Context, assetType domain.AssetType) ([]*domain.Asset, error) {
+func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType domain.AssetType) ([]*domain.Asset, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

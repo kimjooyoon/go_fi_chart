@@ -16,9 +16,9 @@ type Handler struct {
 }
 
 // NewHandler 새로운 API 핸들러를 생성합니다.
-func NewHandler() *Handler {
+func NewHandler(assetRepo domain.AssetRepository) *Handler {
 	return &Handler{
-		assetRepo: domain.NewMemoryAssetRepository(),
+		assetRepo: assetRepo,
 	}
 }
 
@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Get("/{id}", h.GetAsset)
 		r.Put("/{id}", h.UpdateAsset)
 		r.Delete("/{id}", h.DeleteAsset)
+		r.Get("/types/{type}", h.ListAssetsByType)
 	})
 }
 
@@ -52,6 +53,14 @@ type CreateAssetRequest struct {
 	Name     string  `json:"name"`
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
+}
+
+// UpdateAssetRequest 자산 업데이트 요청 구조체
+type UpdateAssetRequest struct {
+	Name     string  `json:"name,omitempty"`
+	Type     string  `json:"type,omitempty"`
+	Amount   float64 `json:"amount,omitempty"`
+	Currency string  `json:"currency,omitempty"`
 }
 
 // ErrorResponse 에러 응답 구조체
@@ -164,7 +173,7 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req CreateAssetRequest
+	var req UpdateAssetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, ErrInvalidRequest, "잘못된 요청 형식")
 		return
@@ -209,12 +218,58 @@ func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.assetRepo.Delete(r.Context(), id); err != nil {
+	// 자산 존재 여부 확인
+	asset, err := h.assetRepo.FindByID(r.Context(), id)
+	if err != nil {
+		if err == domain.ErrAssetNotFound {
+			respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
+			return
+		}
+		respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 조회 실패")
+		return
+	}
+
+	// 자산 삭제
+	if err := h.assetRepo.Delete(r.Context(), asset.ID); err != nil {
+		if err == domain.ErrAssetNotFound {
+			respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
+			return
+		}
 		respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 삭제 실패")
 		return
 	}
 
 	respondJSON(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) ListAssetsByType(w http.ResponseWriter, r *http.Request) {
+	assetType := chi.URLParam(r, "type")
+	if !domain.IsValidAssetType(domain.AssetType(assetType)) {
+		respondError(w, http.StatusBadRequest, "INVALID_ASSET_TYPE", "Invalid asset type")
+		return
+	}
+
+	assets, err := h.assetRepo.FindByType(r.Context(), domain.AssetType(assetType))
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	var response []AssetResponse
+	for _, asset := range assets {
+		response = append(response, AssetResponse{
+			ID:        asset.ID,
+			UserID:    asset.UserID,
+			Type:      string(asset.Type),
+			Name:      asset.Name,
+			Amount:    asset.Amount.Amount,
+			Currency:  asset.Amount.Currency,
+			CreatedAt: asset.CreatedAt,
+			UpdatedAt: asset.UpdatedAt,
+		})
+	}
+
+	respondJSON(w, http.StatusOK, response)
 }
 
 // 응답 헬퍼 함수

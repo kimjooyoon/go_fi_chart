@@ -4,32 +4,32 @@
 
 ### 2월 15일
 - [x] 프로젝트 초기 설정
-  - README.md 작성
-  - 프로젝트 구조 정의
-  - 개발 프로세스 문서화 (LLM_ROLE.md)
+- README.md 작성
+- 프로젝트 구조 정의
+- 개발 프로세스 문서화 (LLM_ROLE.md)
 - 작업 관리 시스템 구축 (TODO.md, DONE.md, PROBLEMS.md)
 
 - [x] 도메인 이벤트 스토밍 완료
-  - docs/event-storming/ 디렉토리 생성
-  - 도메인 이벤트 목록 작성 (1.EVENTS.md)
-  - 커맨드 목록 작성 (2.COMMANDS.md)
-  - 애그리게잇 정의 (3.AGGREGATES.md)
-  - 문서화 가이드라인 작성 (README.md)
+- docs/event-storming/ 디렉토리 생성
+- 도메인 이벤트 목록 작성 (1.EVENTS.md)
+- 커맨드 목록 작성 (2.COMMANDS.md)
+- 애그리게잇 정의 (3.AGGREGATES.md)
+- 문서화 가이드라인 작성 (README.md)
 
 ### 2월 16일
 - [x] 초기 프로젝트 설정
-  - Go 모듈 초기화 (go mod init)
-  - 기본 디렉토리 구조 설정 (cmd, internal, pkg)
-  - Asset 도메인 기본 구조 구현
-  - 코드 품질 도구 설정
-    - golangci-lint 설치 및 설정
-    - .golangci.yml 구성
-    - LLM_ROLE.md에 코드 품질 관리 규칙 추가
+- Go 모듈 초기화 (go mod init)
+- 기본 디렉토리 구조 설정 (cmd, internal, pkg)
+- Asset 도메인 기본 구조 구현
+- 코드 품질 도구 설정
+- golangci-lint 설치 및 설정
+- .golangci.yml 구성
+- LLM_ROLE.md에 코드 품질 관리 규칙 추가
 
 - [x] 테스트 픽스처 구현
-  - Asset, Transaction, Portfolio 테스트 데이터 정의
-  - 테스트 픽스처 유틸리티 함수 구현
-  - 테스트 코드 작성 및 검증
+- Asset, Transaction, Portfolio 테스트 데이터 정의
+- 테스트 픽스처 유틸리티 함수 구현
+- 테스트 코드 작성 및 검증
 
 - [x] 모니터링 시스템 개선
 - 메트릭 도메인 통합

@@ -267,22 +267,22 @@ interface AggregateRepository
                 <void>
                     readFromStream(streamId: string): Promise
                     <DomainEvent
-                    []>
-                    subscribeToStream(streamId: string, handler: EventHandler): Promise
-                    <void>
-                        }
-                        ```
+                            []>
+                        subscribeToStream(streamId: string, handler: EventHandler): Promise
+                        <void>
+                            }
+                            ```
 
-                        ### 읽기 모델 저장소
-                        ```typescript
-                        interface ReadModelRepository
-                        <T> {
-                            save(model: T): Promise
-                            <void>
-                                find(query: Query): Promise
-                                <T
-                                []>
-                                findOne(query: Query): Promise
-                                <T>
-                                    }
-                                    ```
+                            ### 읽기 모델 저장소
+                            ```typescript
+                            interface ReadModelRepository
+                            <T> {
+                                save(model: T): Promise
+                                <void>
+                                    find(query: Query): Promise
+                                    <T
+                                            []>
+                                        findOne(query: Query): Promise
+                                        <T>
+                                            }
+                                            ```
