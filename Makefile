@@ -16,30 +16,11 @@ COVERAGE_HTML=coverage.html
 # 서비스 목록
 SERVICES=asset portfolio transaction monitoring
 
-.PHONY: all
-all: init lint test security coverage
+.PHONY: all tidy verify tools lint test sec build clean
 
-# 초기 설정
-.PHONY: init
-init: install-tools init-work tidy
-	@echo "초기화 완료"
+all: tools tidy verify lint test sec build
 
-.PHONY: init-work
-init-work:
-	@echo "go.work 초기화 중..."
-	@rm -f go.work
-	@$(GO) work init
-	@$(GO) work use .
-	@$(GO) work use ./pkg
-	@for service in $(shell ls services); do \
-		if [ -f "services/$$service/go.mod" ]; then \
-			echo "서비스 추가: $$service"; \
-			$(GO) work use ./services/$$service; \
-		fi \
-	done
-
-.PHONY: install-tools
-install-tools:
+tools:
 	@echo "개발 도구 설치 중..."
 	@if ! which golangci-lint >/dev/null; then \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LINT_VERSION); \
@@ -47,8 +28,9 @@ install-tools:
 	@if ! which gosec >/dev/null; then \
 		go install github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION); \
 	fi
+	@go install golang.org/x/tools/cmd/goimports@latest
+	@go install honnef.co/go/tools/cmd/staticcheck@latest
 
-.PHONY: tidy
 tidy:
 	@echo "의존성 정리 중..."
 	$(GO) mod tidy
@@ -61,91 +43,47 @@ tidy:
 	done
 	@echo "go work sync 실행..."
 	$(GO) work sync
+	@go mod verify
 
-# 테스트
-.PHONY: test
-test: test-all test-services
+verify:
+	@go mod verify
+	@go mod why -m all
 
-.PHONY: test-all
-test-all:
-	@echo "전체 테스트 실행 중..."
-	$(GO) test -v -race ./...
-
-.PHONY: test-services
-test-services:
-	@echo "서비스별 테스트 실행 중..."
-	@for service in $(SERVICES); do \
-		echo "테스트: $$service"; \
-		$(GO) test -v -race ./services/$$service/...; \
-	done
-
-# 린트
-.PHONY: lint
-lint: lint-all lint-services
-
-.PHONY: lint-all
-lint-all:
+lint:
 	@echo "전체 린트 검사 중..."
 	golangci-lint run ./...
+	@goimports -w .
+	@staticcheck ./...
+	@go vet ./...
 
-.PHONY: lint-services
-lint-services:
-	@echo "서비스별 린트 검사 중..."
+test:
+	@echo "전체 테스트 실행 중..."
+	$(GO) test -v -race -coverprofile=$(COVERAGE_FILE) ./...
+	$(GO) tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
+	@echo "서비스별 테스트 실행 중..."
 	@for service in $(SERVICES); do \
-		echo "린트: $$service"; \
-		golangci-lint run ./services/$$service/...; \
+		echo "테스트 실행: $$service"; \
+		(cd services/$$service && \
+		$(GO) test -v -race -coverprofile=coverage.out ./... && \
+		$(GO) tool cover -html=coverage.out -o coverage.html); \
 	done
 
-# 보안 검사
-.PHONY: security
-security: security-all security-services
-
-.PHONY: security-all
-security-all:
+sec:
 	@echo "전체 보안 검사 중..."
 	gosec ./...
 
-.PHONY: security-services
-security-services:
-	@echo "서비스별 보안 검사 중..."
-	@for service in $(SERVICES); do \
-		echo "보안 검사: $$service"; \
-		gosec ./services/$$service/...; \
-	done
+build:
+	$(GO) build -v ./...
 
-# 커버리지
-.PHONY: coverage
-coverage: coverage-html coverage-services
-
-.PHONY: coverage-html
-coverage-html:
-	@echo "전체 커버리지 리포트 생성 중..."
-	$(GO) test -coverprofile=$(COVERAGE_FILE) ./...
-	$(GO) tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
-
-.PHONY: coverage-services
-coverage-services:
-	@echo "서비스별 커버리지 리포트 생성 중..."
-	@for service in $(SERVICES); do \
-		echo "커버리지: $$service"; \
-		$(GO) test -coverprofile=services/$$service/coverage.out ./services/$$service/...; \
-		$(GO) tool cover -html=services/$$service/coverage.out -o services/$$service/coverage.html; \
-	done
-
-# 실행
-.PHONY: run
-run:
-	@echo "서버 실행 중..."
-	$(GO) run $(MAIN_PACKAGE)
-
-# 정리
-.PHONY: clean
 clean:
 	@echo "임시 파일 정리 중..."
 	rm -f $(COVERAGE_FILE) $(COVERAGE_HTML)
 	@for service in $(SERVICES); do \
 		rm -f services/$$service/coverage.out services/$$service/coverage.html; \
 	done
+	go clean
+	rm -f $(shell find . -name '*.test')
+	rm -f $(shell find . -name '*.out')
 
 # 도움말
 .PHONY: help
