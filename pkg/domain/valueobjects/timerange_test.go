@@ -147,3 +147,56 @@ func TestTimeRange_Shift(t *testing.T) {
 	assert.Equal(t, now.Add(shift), shifted.Start)
 	assert.Equal(t, later.Add(shift), shifted.End)
 }
+
+func TestTimeRange_Split(t *testing.T) {
+	t.Run("시간 범위 분할", func(t *testing.T) {
+		// Given
+		now := time.Now()
+		later := now.Add(10 * time.Hour)
+		tr, _ := NewTimeRange(now, later)
+		interval := 2 * time.Hour
+
+		// When
+		ranges := tr.Split(interval)
+
+		// Then
+		assert.Len(t, ranges, 5) // 10시간을 2시간 간격으로 분할하면 5개
+		for i, r := range ranges {
+			if i < len(ranges)-1 {
+				assert.Equal(t, interval, r.Duration())
+				assert.Equal(t, now.Add(time.Duration(i)*interval), r.Start)
+				assert.Equal(t, now.Add(time.Duration(i+1)*interval), r.End)
+			} else {
+				assert.Equal(t, now.Add(time.Duration(i)*interval), r.Start)
+				assert.Equal(t, later, r.End)
+			}
+		}
+	})
+
+	t.Run("음수 간격", func(t *testing.T) {
+		// Given
+		now := time.Now()
+		later := now.Add(24 * time.Hour)
+		tr, _ := NewTimeRange(now, later)
+
+		// When
+		ranges := tr.Split(-1 * time.Hour)
+
+		// Then
+		assert.Empty(t, ranges)
+	})
+
+	t.Run("전체 기간보다 큰 간격", func(t *testing.T) {
+		// Given
+		now := time.Now()
+		later := now.Add(24 * time.Hour)
+		tr, _ := NewTimeRange(now, later)
+
+		// When
+		ranges := tr.Split(48 * time.Hour)
+
+		// Then
+		assert.Len(t, ranges, 1)
+		assert.Equal(t, tr, ranges[0])
+	})
+}

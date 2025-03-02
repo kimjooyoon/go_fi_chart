@@ -191,7 +191,10 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	asset.Update(req.Name, domain.AssetType(req.Type), money)
+	if err := asset.Update(req.Name, domain.AssetType(req.Type), money); err != nil {
+		respondError(w, http.StatusBadRequest, ErrInvalidRequest, err.Error())
+		return
+	}
 	if err := h.assetRepo.Update(r.Context(), asset); err != nil {
 		respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 업데이트 실패")
 		return

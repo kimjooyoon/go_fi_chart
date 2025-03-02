@@ -16,9 +16,13 @@ COVERAGE_HTML=coverage.html
 # 서비스 목록
 SERVICES=asset portfolio transaction monitoring
 
-.PHONY: all tidy verify tools lint test sec build clean
+.PHONY: all tidy verify tools lint test test-services sec build clean all-with-service-tests
 
+# 기본 all 타겟에서는 test-services를 제외합니다
 all: tools tidy verify lint test sec build
+
+# 모든 테스트(전체 + 서비스별)를 실행하는 새로운 타겟
+all-with-service-tests: tools tidy verify lint test test-services sec build
 
 tools:
 	@echo "개발 도구 설치 중..."
@@ -56,10 +60,14 @@ lint:
 	@staticcheck ./...
 	@go vet ./...
 
+# 메인 테스트 타겟을 수정하여 전체 테스트만 실행합니다
 test:
 	@echo "전체 테스트 실행 중..."
 	$(GO) test -v -race -coverprofile=$(COVERAGE_FILE) ./...
 	$(GO) tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
+
+# 서비스별 테스트를 별도의 타겟으로 분리합니다
+test-services:
 	@echo "서비스별 테스트 실행 중..."
 	@for service in $(SERVICES); do \
 		echo "테스트 실행: $$service"; \
@@ -91,9 +99,11 @@ help:
 	@echo "사용 가능한 명령어:"
 	@echo "  make init          - 개발 환경 초기화 (도구 설치 및 의존성 정리)"
 	@echo "  make test          - 모든 테스트 실행"
+	@echo "  make test-services - 서비스별 테스트 실행"
 	@echo "  make lint          - 코드 린트 검사"
 	@echo "  make security      - 보안 취약점 검사"
 	@echo "  make coverage      - 테스트 커버리지 리포트 생성"
 	@echo "  make run           - 서버 실행"
 	@echo "  make clean         - 임시 파일 정리"
-	@echo "  make all           - 전체 검사 실행 (init, lint, test, security, coverage)" 
+	@echo "  make all           - 전체 검사 실행 (init, lint, test, security, coverage)"
+	@echo "  make all-with-service-tests - 전체 검사 + 서비스별 테스트 실행" 

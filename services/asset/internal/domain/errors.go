@@ -14,4 +14,7 @@ var (
 
 	// ErrInvalidCurrency 잘못된 통화일 때 발생하는 에러입니다.
 	ErrInvalidCurrency = errors.New("invalid currency")
+
+	// ErrAssetDeleted 삭제된 자산에 대한 작업을 시도할 때 발생하는 에러입니다.
+	ErrAssetDeleted = errors.New("삭제된 자산입니다")
 )

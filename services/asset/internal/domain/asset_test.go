@@ -82,14 +82,27 @@ func TestAsset_UpdateAmount(t *testing.T) {
 func TestAsset_MarkAsDeleted(t *testing.T) {
 	// Given
 	asset := createTestAsset()
+	originalUpdatedAt := asset.UpdatedAt
 
 	// When
+	time.Sleep(time.Millisecond) // UpdatedAt 변경 확인을 위한 지연
 	asset.MarkAsDeleted()
 
 	// Then
+	assert.True(t, asset.IsDeleted)
+	assert.True(t, asset.UpdatedAt.After(originalUpdatedAt))
+	assert.NotNil(t, asset.DeletedAt)
+
+	// 이벤트 검증
 	events := asset.Events()
 	assert.Len(t, events, 2) // Created + Deleted
 	assert.Equal(t, EventTypeAssetDeleted, events[1].EventType())
+
+	// 삭제된 자산 업데이트 시도
+	newAmount, _ := valueobjects.NewMoney(2000.0, "USD")
+	err := asset.Update("Updated Name", Stock, newAmount)
+	assert.Error(t, err)
+	assert.Equal(t, ErrAssetDeleted, err)
 }
 
 func TestAsset_ClearEvents(t *testing.T) {

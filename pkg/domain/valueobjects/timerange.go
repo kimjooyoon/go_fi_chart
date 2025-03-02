@@ -67,3 +67,26 @@ func (tr TimeRange) Shift(d time.Duration) TimeRange {
 		End:   tr.End.Add(d),
 	}
 }
+
+// Split은 시간 범위를 주어진 간격으로 분할합니다.
+func (tr TimeRange) Split(interval time.Duration) []TimeRange {
+	if interval <= 0 {
+		return []TimeRange{}
+	}
+
+	if interval >= tr.Duration() {
+		return []TimeRange{tr}
+	}
+
+	var ranges []TimeRange
+	start := tr.Start
+	for start.Before(tr.End) {
+		end := start.Add(interval)
+		if end.After(tr.End) {
+			end = tr.End
+		}
+		ranges = append(ranges, TimeRange{Start: start, End: end})
+		start = end
+	}
+	return ranges
+}

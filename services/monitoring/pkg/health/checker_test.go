@@ -64,7 +64,7 @@ func Test_Checker_should_add_and_check(t *testing.T) {
 	assert.Equal(t, "test-check", results[0].Name)
 }
 
-func Test_Checker_should_be_thread_safe(_ *testing.T) {
+func Test_Checker_should_be_thread_safe(t *testing.T) {
 	// Given
 	checker := NewChecker(5 * time.Second)
 	iterations := 1000
@@ -91,6 +91,14 @@ func Test_Checker_should_be_thread_safe(_ *testing.T) {
 	// Then
 	<-done
 	<-done
+
+	// 결과 검증
+	results := checker.CheckAll(context.Background())
+	assert.NotEmpty(t, results)
+	for _, result := range results {
+		assert.Equal(t, "test-check", result.Name)
+		assert.Equal(t, StatusUp, result.Status)
+	}
 }
 
 func TestChecker_CheckAll(t *testing.T) {

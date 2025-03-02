@@ -154,34 +154,52 @@ func TestCreateTransaction(t *testing.T) {
 		handler := NewHandler(repo)
 		router := setupTestRouter(handler)
 
-		reqBody := struct {
-			Type          string    `json:"type"`
-			Amount        float64   `json:"amount"`
-			Quantity      float64   `json:"quantity"`
-			ExecutedPrice float64   `json:"executed_price"`
-			Currency      string    `json:"currency"`
-			ExecutedAt    time.Time `json:"executed_at"`
+		testCases := []struct {
+			name    string
+			reqBody interface{}
 		}{
-			Type:          "INVALID_TYPE",
-			Amount:        -100.0,
-			Quantity:      -1,
-			ExecutedPrice: -50.0,
-			Currency:      "",
-			ExecutedAt:    time.Now(),
+			{
+				name: "필수 필드 누락",
+				reqBody: struct {
+					Type string `json:"type"`
+				}{
+					Type: "BUY",
+				},
+			},
+			{
+				name: "잘못된 타입",
+				reqBody: struct {
+					Type          string    `json:"type"`
+					Amount        float64   `json:"amount"`
+					Quantity      float64   `json:"quantity"`
+					ExecutedPrice float64   `json:"executed_price"`
+					Currency      string    `json:"currency"`
+					ExecutedAt    time.Time `json:"executed_at"`
+				}{
+					Type:          "INVALID_TYPE",
+					Amount:        -100.0,
+					Quantity:      -1,
+					ExecutedPrice: -50.0,
+					Currency:      "",
+					ExecutedAt:    time.Now(),
+				},
+			},
 		}
 
-		body, err := json.Marshal(reqBody)
-		assert.NoError(t, err)
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				body, err := json.Marshal(tc.reqBody)
+				assert.NoError(t, err)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/transactions", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		rr := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/transactions", bytes.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				rr := httptest.NewRecorder()
 
-		// When
-		router.ServeHTTP(rr, req)
+				router.ServeHTTP(rr, req)
 
-		// Then
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+				assert.Equal(t, http.StatusBadRequest, rr.Code)
+			})
+		}
 	})
 }
 

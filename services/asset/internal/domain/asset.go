@@ -21,7 +21,7 @@ const (
 	Crypto     AssetType = "CRYPTO"
 )
 
-// Asset 자산을 나타냅니다.
+// Asset은 사용자의 자산을 나타냅니다.
 type Asset struct {
 	ID        string
 	UserID    string
@@ -30,8 +30,11 @@ type Asset struct {
 	Amount    valueobjects.Money
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	events    []events.Event
-	mu        sync.RWMutex
+	IsDeleted bool
+	DeletedAt *time.Time
+
+	events []events.Event
+	mu     sync.RWMutex
 }
 
 // NewAsset 새로운 자산을 생성합니다.
@@ -54,10 +57,14 @@ func NewAsset(userID string, assetType AssetType, name string, amount valueobjec
 	return asset
 }
 
-// Update 자산 정보를 업데이트합니다.
-func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Money) {
+// Update는 자산 정보를 업데이트합니다.
+func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Money) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	if a.IsDeleted {
+		return ErrAssetDeleted
+	}
 
 	prevAmount := a.Amount
 	a.Name = name
@@ -65,10 +72,11 @@ func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Mon
 	a.Amount = amount
 	a.UpdatedAt = time.Now()
 
-	a.events = append(a.events, NewAssetUpdatedEvent(a))
-	if !prevAmount.Equals(amount) {
-		a.events = append(a.events, NewAssetAmountChangedEvent(a, prevAmount))
-	}
+	a.events = append(a.events,
+		NewAssetUpdatedEvent(a),
+		NewAssetAmountChangedEvent(a, prevAmount))
+
+	return nil
 }
 
 // UpdateAmount 자산의 금액을 업데이트합니다.
@@ -87,10 +95,16 @@ func (a *Asset) UpdateAmount(amount valueobjects.Money) {
 	a.events = append(a.events, NewAssetAmountChangedEvent(a, prevAmount))
 }
 
-// MarkAsDeleted 자산을 삭제 상태로 표시합니다.
+// MarkAsDeleted는 자산을 삭제 상태로 표시합니다.
 func (a *Asset) MarkAsDeleted() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	now := time.Now()
+	a.IsDeleted = true
+	a.DeletedAt = &now
+	a.UpdatedAt = now
+
 	a.events = append(a.events, NewAssetDeletedEvent(a))
 }
 
