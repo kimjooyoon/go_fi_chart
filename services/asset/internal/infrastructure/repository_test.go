@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/aske/go_fi_chart/internal/common/repository"
 	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/aske/go_fi_chart/services/asset/internal/domain"
@@ -327,4 +328,82 @@ func TestMemoryAssetRepository_DeleteWithConcurrentAccess(t *testing.T) {
 	// Then
 	_, err = repo.FindByID(context.Background(), asset.ID)
 	assert.ErrorContains(t, err, domain.ErrAssetNotFound.Error())
+}
+
+func TestMemoryAssetRepository_FindAll(t *testing.T) {
+	// 준비
+	eventBus := new(MockEventBus)
+	repo := NewMemoryAssetRepository(eventBus)
+	ctx := context.Background()
+
+	// 세 개의 자산 준비
+	amount1, _ := valueobjects.NewMoney(1000.0, "USD")
+	asset1 := domain.NewAsset("user-1", domain.Stock, "자산 1", amount1)
+
+	amount2, _ := valueobjects.NewMoney(2000.0, "USD")
+	asset2 := domain.NewAsset("user-1", domain.Bond, "자산 2", amount2)
+
+	amount3, _ := valueobjects.NewMoney(3000.0, "USD")
+	asset3 := domain.NewAsset("user-2", domain.Stock, "자산 3", amount3)
+
+	eventBus.On("Publish", ctx, mock.AnythingOfType("*events.BaseEvent")).Return(nil)
+	repo.Save(ctx, asset1)
+	repo.Save(ctx, asset2)
+	repo.Save(ctx, asset3)
+
+	// 모든 자산 조회
+	assets, err := repo.FindAll(ctx)
+	assert.NoError(t, err)
+	assert.Len(t, assets, 3)
+	assert.Contains(t, assets, asset1)
+	assert.Contains(t, assets, asset2)
+	assert.Contains(t, assets, asset3)
+
+	// 페이지네이션 테스트
+	limitedAssets, err := repo.FindAll(ctx, repository.WithLimit(2))
+	assert.NoError(t, err)
+	assert.Len(t, limitedAssets, 2)
+
+	// 오프셋 테스트
+	offsetAssets, err := repo.FindAll(ctx, repository.WithOffset(2), repository.WithLimit(2))
+	assert.NoError(t, err)
+	assert.Len(t, offsetAssets, 1)
+}
+
+func TestMemoryAssetRepository_Count(t *testing.T) {
+	// 준비
+	eventBus := new(MockEventBus)
+	repo := NewMemoryAssetRepository(eventBus)
+	ctx := context.Background()
+
+	// 자산 없는 상태에서 개수 확인
+	count, err := repo.Count(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), count)
+
+	// 세 개의 자산 준비
+	amount1, _ := valueobjects.NewMoney(1000.0, "USD")
+	asset1 := domain.NewAsset("user-1", domain.Stock, "자산 1", amount1)
+
+	amount2, _ := valueobjects.NewMoney(2000.0, "USD")
+	asset2 := domain.NewAsset("user-1", domain.Bond, "자산 2", amount2)
+
+	amount3, _ := valueobjects.NewMoney(3000.0, "USD")
+	asset3 := domain.NewAsset("user-2", domain.Stock, "자산 3", amount3)
+
+	eventBus.On("Publish", ctx, mock.AnythingOfType("*events.BaseEvent")).Return(nil)
+	repo.Save(ctx, asset1)
+	repo.Save(ctx, asset2)
+	repo.Save(ctx, asset3)
+
+	// 자산 개수 확인
+	count, err = repo.Count(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(3), count)
+
+	// 자산 하나 삭제 후 개수 확인
+	repo.Delete(ctx, asset1.ID)
+	count, err = repo.Count(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(2), count)
 }

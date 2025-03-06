@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aske/go_fi_chart/internal/common/repository"
 	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/google/uuid"
@@ -153,10 +154,7 @@ func (a *Asset) Associate(targetCurrency string, exchangeRate float64) (*Asset, 
 
 // AssetRepository 자산 저장소 인터페이스입니다.
 type AssetRepository interface {
-	Save(ctx context.Context, asset *Asset) error
-	FindByID(ctx context.Context, id string) (*Asset, error)
-	Update(ctx context.Context, asset *Asset) error
-	Delete(ctx context.Context, id string) error
+	repository.Repository[*Asset, string]
 	FindByUserID(ctx context.Context, userID string) ([]*Asset, error)
 	FindByType(ctx context.Context, assetType AssetType) ([]*Asset, error)
 }
