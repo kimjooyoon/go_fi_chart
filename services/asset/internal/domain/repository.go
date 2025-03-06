@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/aske/go_fi_chart/internal/common/repository"
 )
 
 // MemoryAssetRepository 인메모리 자산 저장소 구현체입니다.
@@ -69,6 +71,54 @@ func (r *MemoryAssetRepository) Delete(_ context.Context, id string) error {
 
 	delete(r.assets, id)
 	return nil
+}
+
+// FindAll 모든 자산을 조회합니다. 옵션을 통해 필터링, 정렬, 페이지네이션을 적용할 수 있습니다.
+func (r *MemoryAssetRepository) FindAll(_ context.Context, opts ...repository.FindOption) ([]*Asset, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	// 옵션 적용
+	options := repository.NewFindOptions()
+	for _, opt := range opts {
+		opt.Apply(options)
+	}
+
+	// 결과 배열 생성
+	var result []*Asset
+	for _, asset := range r.assets {
+		// 필터링 로직은 향후 구현
+		result = append(result, asset)
+	}
+
+	// 페이지네이션 적용
+	if options.Limit > 0 {
+		offset := int64(options.Offset)
+		limit := int64(options.Limit)
+
+		if offset >= int64(len(result)) {
+			return []*Asset{}, nil
+		}
+
+		end := offset + limit
+		if end > int64(len(result)) {
+			end = int64(len(result))
+		}
+
+		return result[offset:end], nil
+	}
+
+	return result, nil
+}
+
+// Count 조건에 맞는 자산의 총 개수를 반환합니다.
+func (r *MemoryAssetRepository) Count(_ context.Context, opts ...repository.FindOption) (int64, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	// 필터링 로직은 향후 구현
+	// 지금은 모든 자산의 개수를 반환
+	return int64(len(r.assets)), nil
 }
 
 // FindByUserID 사용자 ID로 자산 목록을 조회합니다.

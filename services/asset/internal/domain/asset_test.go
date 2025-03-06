@@ -121,3 +121,52 @@ func createTestAsset() *Asset {
 	amount, _ := valueobjects.NewMoney(1000.0, "USD")
 	return NewAsset("user-123", Stock, "Tesla Stock", amount)
 }
+
+func TestIsValidAssetType(t *testing.T) {
+	// Given
+	validTypes := []AssetType{Stock, Bond, Cash, RealEstate, Crypto}
+	invalidType := AssetType("INVALID")
+
+	// When & Then
+	for _, validType := range validTypes {
+		assert.True(t, IsValidAssetType(validType), "유효한 자산 타입 %s가 유효하지 않은 것으로 판단됨", validType)
+	}
+	assert.False(t, IsValidAssetType(invalidType), "유효하지 않은 자산 타입 %s가 유효한 것으로 판단됨", invalidType)
+}
+
+func TestAsset_Associate(t *testing.T) {
+	t.Run("동일한 통화로 변환", func(t *testing.T) {
+		// Given
+		asset := createTestAsset()
+
+		// When
+		associatedAsset, err := asset.Associate("USD", 1.0)
+
+		// Then
+		assert.NoError(t, err)
+		assert.Equal(t, asset, associatedAsset)
+	})
+
+	t.Run("다른 통화로 변환", func(t *testing.T) {
+		// Given
+		asset := createTestAsset() // 1000 USD
+		exchangeRate := 1300.0     // 1 USD = 1300 KRW
+
+		// When
+		associatedAsset, err := asset.Associate("KRW", exchangeRate)
+
+		// Then
+		assert.NoError(t, err)
+		assert.NotEqual(t, asset.ID, associatedAsset.ID)
+		assert.Equal(t, asset.UserID, associatedAsset.UserID)
+		assert.Equal(t, asset.Type, associatedAsset.Type)
+		assert.Equal(t, asset.Name, associatedAsset.Name)
+		assert.Equal(t, "KRW", associatedAsset.Amount.Currency)
+		assert.Equal(t, 1300000.0, associatedAsset.Amount.Amount)
+	})
+
+	t.Run("금액 곱셈 에러", func(t *testing.T) {
+		// 실제 테스트는 skip - 에러 상황 시뮬레이션이 어려움
+		t.Skip("Money.Multiply 메서드가 에러를 반환하는 상황을 시뮬레이션하기 어려우므로 스킵합니다.")
+	})
+}

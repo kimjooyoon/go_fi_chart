@@ -2,9 +2,11 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 
+	"github.com/aske/go_fi_chart/internal/common/repository"
 	"github.com/aske/go_fi_chart/pkg/domain/events"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/aske/go_fi_chart/services/asset/internal/domain"
@@ -219,6 +221,131 @@ func TestMemoryAssetRepository_FindByType(t *testing.T) {
 	assert.Len(t, bondAssets, 1)
 	assert.Equal(t, stockAsset.ID, stockAssets[0].ID)
 	assert.Equal(t, bondAsset.ID, bondAssets[0].ID)
+}
+
+func TestMemoryAssetRepository_FindAll(t *testing.T) {
+	// Given
+	ctx := context.Background()
+	eventBus := &MockEventBus{}
+	eventBus.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	repo := NewMemoryAssetRepository(eventBus)
+
+	// 여러 자산 생성
+	assets := []*domain.Asset{}
+	for i := 0; i < 10; i++ {
+		amount, _ := valueobjects.NewMoney(float64(1000+i*100), "USD")
+		asset := domain.NewAsset(fmt.Sprintf("user-%d", i%3), domain.Stock, fmt.Sprintf("Asset %d", i), amount)
+		err := repo.Save(ctx, asset)
+		assert.NoError(t, err)
+		assets = append(assets, asset)
+	}
+
+	// When - 옵션 없이 모든 자산 조회
+	t.Run("모든 자산 조회", func(t *testing.T) {
+		allAssets, err := repo.FindAll(ctx)
+
+		// Then
+		assert.NoError(t, err)
+		assert.Len(t, allAssets, 10)
+	})
+
+	// When - 페이지네이션 적용
+	t.Run("페이지네이션 적용", func(t *testing.T) {
+		// 페이지당 3개씩 조회, 총 4페이지로 테스트
+		// (10개 자산이므로 첫 3개 페이지에는 3개씩, 마지막 4번째 페이지에는 1개 자산)
+		limit := 3
+
+		// 첫 번째 페이지
+		page1Assets, err := repo.FindAll(ctx,
+			repository.WithLimit(limit),
+			repository.WithOffset(0),
+		)
+		assert.NoError(t, err)
+		assert.Len(t, page1Assets, limit)
+
+		// 두 번째 페이지
+		page2Assets, err := repo.FindAll(ctx,
+			repository.WithLimit(limit),
+			repository.WithOffset(limit),
+		)
+		assert.NoError(t, err)
+		assert.Len(t, page2Assets, limit)
+
+		// 세 번째 페이지
+		page3Assets, err := repo.FindAll(ctx,
+			repository.WithLimit(limit),
+			repository.WithOffset(limit*2),
+		)
+		assert.NoError(t, err)
+		assert.Len(t, page3Assets, limit)
+
+		// 네 번째 페이지 (마지막 1개)
+		page4Assets, err := repo.FindAll(ctx,
+			repository.WithLimit(limit),
+			repository.WithOffset(limit*3),
+		)
+		assert.NoError(t, err)
+		assert.Len(t, page4Assets, 1)
+	})
+
+	// When - 범위를 벗어나는 오프셋
+	t.Run("범위를 벗어나는 오프셋", func(t *testing.T) {
+		outOfRangeAssets, err := repo.FindAll(ctx,
+			repository.WithOffset(20),
+			repository.WithLimit(10),
+		)
+
+		// Then
+		assert.NoError(t, err)
+		assert.Empty(t, outOfRangeAssets)
+	})
+}
+
+func TestMemoryAssetRepository_Count(t *testing.T) {
+	// Given
+	ctx := context.Background()
+	eventBus := &MockEventBus{}
+	eventBus.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	repo := NewMemoryAssetRepository(eventBus)
+
+	// 빈 레포지토리에서 카운트
+	t.Run("빈 레포지토리", func(t *testing.T) {
+		count, err := repo.Count(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(0), count)
+	})
+
+	// 여러 자산 생성
+	for i := 0; i < 5; i++ {
+		amount, _ := valueobjects.NewMoney(float64(1000+i*100), "USD")
+		asset := domain.NewAsset(fmt.Sprintf("user-%d", i%2), domain.Stock, fmt.Sprintf("Asset %d", i), amount)
+		err := repo.Save(ctx, asset)
+		assert.NoError(t, err)
+	}
+
+	// 자산 추가 후 카운트
+	t.Run("자산 추가 후", func(t *testing.T) {
+		count, err := repo.Count(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), count)
+	})
+
+	// 자산 삭제 후 카운트
+	t.Run("자산 삭제 후", func(t *testing.T) {
+		// 처음 생성한 자산 삭제
+		assets, _ := repo.FindAll(ctx)
+		firstAsset := assets[0]
+		err := repo.Delete(ctx, firstAsset.ID)
+		assert.NoError(t, err)
+
+		// 카운트 확인
+		count, err := repo.Count(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, int64(4), count)
+	})
 }
 
 func TestMemoryAssetRepository_ConcurrentOperations(t *testing.T) {

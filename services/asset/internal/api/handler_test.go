@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/aske/go_fi_chart/internal/common/repository"
 	"github.com/aske/go_fi_chart/pkg/domain/valueobjects"
 	"github.com/aske/go_fi_chart/services/asset/internal/domain"
 	"github.com/go-chi/chi/v5"
@@ -57,6 +58,21 @@ func (m *MockAssetRepository) FindByUserID(ctx context.Context, userID string) (
 
 func (m *MockAssetRepository) FindByType(ctx context.Context, assetType domain.AssetType) ([]*domain.Asset, error) {
 	args := m.Called(ctx, assetType)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*domain.Asset), args.Error(1)
+}
+
+// Count는 자산의 총 개수를 반환합니다.
+func (m *MockAssetRepository) Count(ctx context.Context, opts ...repository.FindOption) (int64, error) {
+	args := m.Called(ctx, opts)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// FindAll은 조건에 맞는 모든 자산을 반환합니다.
+func (m *MockAssetRepository) FindAll(ctx context.Context, opts ...repository.FindOption) ([]*domain.Asset, error) {
+	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
