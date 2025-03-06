@@ -137,7 +137,11 @@ func (a *Asset) Associate(targetCurrency string, exchangeRate float64) (*Asset, 
 	}
 
 	// 금액을 소수점 2자리로 반올림
-	roundedAmount := newAmount.Round(2, valueobjects.RoundHalfUp)
+	roundedAmount, err := valueobjects.NewMoney(newAmount.Amount, targetCurrency)
+	if err != nil {
+		return nil, err
+	}
+	roundedAmount = roundedAmount.Round(2, valueobjects.RoundHalfUp)
 
 	associatedAsset := &Asset{
 		ID:        uuid.New().String(),
