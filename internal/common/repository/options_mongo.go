@@ -8,13 +8,13 @@ import (
 // ToMongoOptions는 FindOptions를 MongoDB의 FindOptions로 변환합니다.
 func (opts *FindOptions) ToMongoOptions() *options.FindOptions {
 	mongoOpts := options.Find()
-	
+
 	// 페이지네이션 적용
 	if opts.Limit > 0 {
 		mongoOpts.SetLimit(int64(opts.Limit))
 		mongoOpts.SetSkip(int64(opts.Offset))
 	}
-	
+
 	// 정렬 적용
 	if len(opts.Sort) > 0 {
 		sort := bson.D{}
@@ -32,16 +32,22 @@ func (opts *FindOptions) ToMongoOptions() *options.FindOptions {
 			mongoOpts.SetSort(sort)
 		}
 	}
-	
+
 	return mongoOpts
 }
 
 // WithMongoFilter는 MongoDB에 특화된 필터를 추가하는 옵션을 생성합니다.
 func WithMongoFilter(filter bson.M) FindOption {
-	return func(options *FindOptions) {
-		if options.ExtraFilters == nil {
-			options.ExtraFilters = make(map[string]interface{})
-		}
-		options.ExtraFilters["mongodb_filter"] = filter
+	return mongoFilterOption{filter: filter}
+}
+
+type mongoFilterOption struct {
+	filter bson.M
+}
+
+func (o mongoFilterOption) Apply(options *FindOptions) {
+	if options.ExtraFilters == nil {
+		options.ExtraFilters = make(map[string]interface{})
 	}
+	options.ExtraFilters["mongodb_filter"] = o.filter
 }
