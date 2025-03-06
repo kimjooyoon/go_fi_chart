@@ -138,7 +138,7 @@ func TestRepositoryInterface(t *testing.T) {
 
 	t.Run("Count", func(t *testing.T) {
 		opts := []repository.FindOption{
-			repository.WithFilter("name", "eq", "Test"),
+			repository.WithComplexFilter("name", "eq", "Test"),
 		}
 
 		mockRepo.On("Count", ctx, opts).Return(int64(5), nil).Once()
@@ -197,12 +197,12 @@ func TestFindOptions(t *testing.T) {
 	assert.Equal(t, repository.SortDescending, options.SortOrder)
 
 	// WithFilter
-	filterOpt := repository.WithFilter("status", "eq", "active")
+	filterOpt := repository.WithComplexFilter("status", "eq", "active")
 	filterOpt.Apply(options)
-	assert.Len(t, options.Filters, 1)
-	assert.Equal(t, "status", options.Filters[0].Field)
-	assert.Equal(t, "eq", options.Filters[0].Operator)
-	assert.Equal(t, "active", options.Filters[0].Value)
+	assert.Len(t, options.FilterList, 1)
+	assert.Equal(t, "status", options.FilterList[0].Field)
+	assert.Equal(t, "eq", options.FilterList[0].Operator)
+	assert.Equal(t, "active", options.FilterList[0].Value)
 
 	// WithPagination
 	paginationOpt := repository.WithPagination(2, 25)

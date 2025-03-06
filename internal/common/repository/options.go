@@ -7,12 +7,15 @@ type FindOption interface {
 
 // FindOptions 조회 옵션 집합
 type FindOptions struct {
-	Limit      int
-	Offset     int
-	SortBy     string
-	SortOrder  SortOrder
-	Filters    []Filter
-	Pagination *Pagination
+	Limit        int
+	Offset       int
+	SortBy       string
+	SortOrder    SortOrder
+	FilterList   []Filter               // 기존 필터 슬라이스 (이름 변경)
+	Sort         map[string]SortOrder   // 다중 필드 정렬을 위한 맵
+	Filters      map[string]interface{} // 필터를 위한 맵
+	ExtraFilters map[string]interface{} // 추가 필터를 위한 맵
+	Pagination   *Pagination
 }
 
 // SortOrder 정렬 순서 타입
@@ -41,9 +44,13 @@ type Pagination struct {
 // NewFindOptions 기본 옵션으로 FindOptions 생성
 func NewFindOptions() *FindOptions {
 	return &FindOptions{
-		Limit:     100,
-		Offset:    0,
-		SortOrder: SortAscending,
+		Limit:        100,
+		Offset:       0,
+		SortOrder:    SortAscending,
+		FilterList:   make([]Filter, 0),
+		Filters:      make(map[string]interface{}),
+		Sort:         make(map[string]SortOrder),
+		ExtraFilters: make(map[string]interface{}),
 	}
 }
 
@@ -86,11 +93,14 @@ type sortOption struct {
 func (o sortOption) Apply(options *FindOptions) {
 	options.SortBy = o.field
 	options.SortOrder = o.order
+
+	// 다중 필드 정렬을 위해 맵에도 추가
+	options.Sort[o.field] = o.order
 }
 
-// WithFilter 필터링 옵션
-func WithFilter(field, operator string, value interface{}) FindOption {
-	return filterOption{
+// WithComplexFilter 복잡한 필터링 옵션 (기존 슬라이스 방식 유지)
+func WithComplexFilter(field, operator string, value interface{}) FindOption {
+	return complexFilterOption{
 		filter: Filter{
 			Field:    field,
 			Operator: operator,
@@ -99,12 +109,29 @@ func WithFilter(field, operator string, value interface{}) FindOption {
 	}
 }
 
-type filterOption struct {
+type complexFilterOption struct {
 	filter Filter
 }
 
+func (o complexFilterOption) Apply(options *FindOptions) {
+	options.FilterList = append(options.FilterList, o.filter)
+}
+
+// WithFilter 간단한 필터링 옵션 (맵 기반)
+func WithFilter(field string, value interface{}) FindOption {
+	return filterOption{
+		field: field,
+		value: value,
+	}
+}
+
+type filterOption struct {
+	field string
+	value interface{}
+}
+
 func (o filterOption) Apply(options *FindOptions) {
-	options.Filters = append(options.Filters, o.filter)
+	options.Filters[o.field] = o.value
 }
 
 // WithPagination 페이지네이션 옵션

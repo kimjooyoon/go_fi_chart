@@ -122,9 +122,15 @@ func (r *MemoryAssetRepository) Count(_ context.Context, opts ...repository.Find
 }
 
 // FindByUserID 사용자 ID로 자산 목록을 조회합니다.
-func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) ([]*Asset, error) {
+func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string, opts ...repository.FindOption) ([]*Asset, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
+
+	// 옵션 적용
+	options := repository.NewFindOptions()
+	for _, opt := range opts {
+		opt.Apply(options)
+	}
 
 	var assets []*Asset
 	for _, asset := range r.assets {
@@ -133,13 +139,36 @@ func (r *MemoryAssetRepository) FindByUserID(_ context.Context, userID string) (
 		}
 	}
 
+	// 페이지네이션 적용
+	if options.Limit > 0 {
+		offset := int64(options.Offset)
+		limit := int64(options.Limit)
+
+		if offset >= int64(len(assets)) {
+			return []*Asset{}, nil
+		}
+
+		end := offset + limit
+		if end > int64(len(assets)) {
+			end = int64(len(assets))
+		}
+
+		return assets[offset:end], nil
+	}
+
 	return assets, nil
 }
 
 // FindByType 자산 유형으로 자산 목록을 조회합니다.
-func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType AssetType) ([]*Asset, error) {
+func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType AssetType, opts ...repository.FindOption) ([]*Asset, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
+
+	// 옵션 적용
+	options := repository.NewFindOptions()
+	for _, opt := range opts {
+		opt.Apply(options)
+	}
 
 	var assets []*Asset
 	for _, asset := range r.assets {
@@ -148,5 +177,52 @@ func (r *MemoryAssetRepository) FindByType(_ context.Context, assetType AssetTyp
 		}
 	}
 
+	// 페이지네이션 적용
+	if options.Limit > 0 {
+		offset := int64(options.Offset)
+		limit := int64(options.Limit)
+
+		if offset >= int64(len(assets)) {
+			return []*Asset{}, nil
+		}
+
+		end := offset + limit
+		if end > int64(len(assets)) {
+			end = int64(len(assets))
+		}
+
+		return assets[offset:end], nil
+	}
+
 	return assets, nil
+}
+
+// CountByUserID는 사용자 ID에 해당하는 자산 개수를 반환합니다.
+func (r *MemoryAssetRepository) CountByUserID(_ context.Context, userID string) (int64, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	var count int64
+	for _, asset := range r.assets {
+		if asset.UserID == userID {
+			count++
+		}
+	}
+
+	return count, nil
+}
+
+// CountByType은 자산 유형에 해당하는 자산 개수를 반환합니다.
+func (r *MemoryAssetRepository) CountByType(_ context.Context, assetType AssetType) (int64, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	var count int64
+	for _, asset := range r.assets {
+		if asset.Type == assetType {
+			count++
+		}
+	}
+
+	return count, nil
 }
