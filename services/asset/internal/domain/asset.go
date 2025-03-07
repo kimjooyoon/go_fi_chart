@@ -20,7 +20,7 @@ const (
 	Crypto     AssetType = "CRYPTO"
 )
 
-// Asset은 사용자의 자산을 나타냅니다.
+// Asset 사용자의 자산을 나타냅니다.
 type Asset struct {
 	ID        string
 	UserID    string
@@ -56,13 +56,13 @@ func NewAsset(userID string, assetType AssetType, name string, amount valueobjec
 	return asset
 }
 
-// Update는 자산 정보를 업데이트합니다.
+// Update 자산 정보를 업데이트합니다.
 func (a *Asset) Update(name string, assetType AssetType, amount valueobjects.Money) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	if a.IsDeleted {
-		return ErrAssetDeleted
+		return NewAssetDeletedError(a.ID)
 	}
 
 	prevAmount := a.Amount
@@ -94,7 +94,7 @@ func (a *Asset) UpdateAmount(amount valueobjects.Money) {
 	a.events = append(a.events, NewAssetAmountChangedEvent(a, prevAmount))
 }
 
-// MarkAsDeleted는 자산을 삭제 상태로 표시합니다.
+// MarkAsDeleted 자산을 삭제 상태로 표시합니다.
 func (a *Asset) MarkAsDeleted() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -111,9 +111,9 @@ func (a *Asset) MarkAsDeleted() {
 func (a *Asset) Events() []events.Event {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-	events := make([]events.Event, len(a.events))
-	copy(events, a.events)
-	return events
+	eventList := make([]events.Event, len(a.events))
+	copy(eventList, a.events)
+	return eventList
 }
 
 // ClearEvents 이벤트 목록을 초기화합니다.
@@ -123,7 +123,7 @@ func (a *Asset) ClearEvents() {
 	a.events = make([]events.Event, 0)
 }
 
-// Associate는 자산을 다른 통화로 변환합니다.
+// Associate 자산을 다른 통화로 변환합니다.
 func (a *Asset) Associate(targetCurrency string, exchangeRate float64) (*Asset, error) {
 	if targetCurrency == a.Amount.Currency {
 		return a, nil
