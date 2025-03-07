@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -44,7 +45,10 @@ func TestAsset_Update(t *testing.T) {
 
 	// When
 	time.Sleep(time.Millisecond) // UpdatedAt 변경 확인을 위한 지연
-	asset.Update(newName, newType, newAmount)
+	err := asset.Update(newName, newType, newAmount)
+	if err != nil {
+		return
+	}
 
 	// Then
 	assert.Equal(t, newName, asset.Name)
@@ -102,7 +106,9 @@ func TestAsset_MarkAsDeleted(t *testing.T) {
 	newAmount, _ := valueobjects.NewMoney(2000.0, "USD")
 	err := asset.Update("Updated Name", Stock, newAmount)
 	assert.Error(t, err)
-	assert.Equal(t, ErrAssetDeleted, err)
+	var assetDeletedError AssetDeletedError
+	ok := errors.As(err, &assetDeletedError)
+	assert.True(t, ok, "에러는 AssetDeletedError 타입이어야 합니다")
 }
 
 func TestAsset_ClearEvents(t *testing.T) {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -148,8 +149,15 @@ func (h *Handler) GetAsset(w http.ResponseWriter, r *http.Request) {
 
 	asset, err := h.assetRepo.FindByID(r.Context(), id)
 	if err != nil {
-		respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
-		return
+		var assetNotFoundError domain.AssetNotFoundError
+		switch {
+		case errors.As(err, &assetNotFoundError):
+			respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
+			return
+		default:
+			respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 조회 실패")
+			return
+		}
 	}
 
 	response := AssetResponse{
@@ -181,8 +189,15 @@ func (h *Handler) UpdateAsset(w http.ResponseWriter, r *http.Request) {
 
 	asset, err := h.assetRepo.FindByID(r.Context(), id)
 	if err != nil {
-		respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
-		return
+		var assetNotFoundError domain.AssetNotFoundError
+		switch {
+		case errors.As(err, &assetNotFoundError):
+			respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
+			return
+		default:
+			respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 조회 실패")
+			return
+		}
 	}
 
 	money, err := valueobjects.NewMoney(req.Amount, req.Currency)
@@ -224,22 +239,28 @@ func (h *Handler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	// 자산 존재 여부 확인
 	asset, err := h.assetRepo.FindByID(r.Context(), id)
 	if err != nil {
-		if err == domain.ErrAssetNotFound {
+		var assetNotFoundError domain.AssetNotFoundError
+		switch {
+		case errors.As(err, &assetNotFoundError):
 			respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
 			return
+		default:
+			respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 조회 실패")
+			return
 		}
-		respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 조회 실패")
-		return
 	}
 
 	// 자산 삭제
 	if err := h.assetRepo.Delete(r.Context(), asset.ID); err != nil {
-		if err == domain.ErrAssetNotFound {
+		var assetNotFoundError domain.AssetNotFoundError
+		switch {
+		case errors.As(err, &assetNotFoundError):
 			respondError(w, http.StatusNotFound, ErrNotFound, "자산을 찾을 수 없습니다")
 			return
+		default:
+			respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 삭제 실패")
+			return
 		}
-		respondError(w, http.StatusInternalServerError, ErrInternalServer, "자산 삭제 실패")
-		return
 	}
 
 	respondJSON(w, http.StatusNoContent, nil)

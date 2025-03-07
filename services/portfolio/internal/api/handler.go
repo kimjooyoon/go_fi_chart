@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -252,12 +253,15 @@ func (h *Handler) UpdateAssetWeight(w http.ResponseWriter, r *http.Request) {
 
 	if err := portfolio.UpdateAssetWeight(assetID, weight); err != nil {
 		h.logger.Error("failed to update asset weight", "error", err)
-		if err == domain.ErrAssetNotFound {
+		var assetNotFoundError domain.AssetNotFoundError
+		switch {
+		case errors.As(err, &assetNotFoundError):
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
 	}
 
 	if err := h.portfolioRepo.Update(r.Context(), portfolio); err != nil {
@@ -288,12 +292,15 @@ func (h *Handler) RemoveAsset(w http.ResponseWriter, r *http.Request) {
 
 	if err := portfolio.RemoveAsset(assetID); err != nil {
 		h.logger.Error("failed to remove asset", "error", err)
-		if err == domain.ErrAssetNotFound {
+		var assetNotFoundError domain.AssetNotFoundError
+		switch {
+		case errors.As(err, &assetNotFoundError):
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
 	}
 
 	if err := h.portfolioRepo.Update(r.Context(), portfolio); err != nil {
@@ -316,7 +323,7 @@ func (h *Handler) ListUserPortfolios(w http.ResponseWriter, r *http.Request) {
 	portfolios, err := h.portfolioRepo.FindByUserID(r.Context(), userID)
 	if err != nil {
 		h.logger.Error("failed to find portfolios", "error", err)
-		if err == domain.ErrPortfolioNotFound {
+		if domain.IsPortfolioNotFound(err) {
 			http.Error(w, "portfolios not found", http.StatusNotFound)
 			return
 		}

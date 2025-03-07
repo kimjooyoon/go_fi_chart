@@ -93,7 +93,7 @@ func (r *MemoryAssetRepository) Delete(ctx context.Context, id string) error {
 
 	asset, exists := r.assets[id]
 	if !exists {
-		return fmt.Errorf("%w: %s", domain.ErrAssetNotFound, id)
+		return domain.NewAssetNotFoundError(id)
 	}
 
 	asset.MarkAsDeleted()

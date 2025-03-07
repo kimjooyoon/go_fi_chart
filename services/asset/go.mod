@@ -3,6 +3,8 @@ module github.com/aske/go_fi_chart/services/asset
 go 1.24.0
 
 require (
+	github.com/aske/go_fi_chart/internal/common/errors v0.0.0
+	github.com/aske/go_fi_chart/internal/common/repository v0.0.0-00010101000000-000000000000
 	github.com/aske/go_fi_chart/pkg v0.0.0
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/google/uuid v1.6.0
@@ -29,3 +31,7 @@ require (
 )
 
 replace github.com/aske/go_fi_chart/pkg => ../../pkg
+
+replace github.com/aske/go_fi_chart/internal/common/errors => ../../internal/common/errors
+
+replace github.com/aske/go_fi_chart/internal/common/repository => ../../internal/common/repository
