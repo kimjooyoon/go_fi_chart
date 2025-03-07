@@ -4,6 +4,7 @@ use (
 	.
 	./pkg
 	./services/asset
+	./services/datacollection
 	./services/monitoring
 	./services/portfolio
 	./services/transaction
