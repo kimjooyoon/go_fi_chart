@@ -72,7 +72,7 @@ func (p *Portfolio) UpdateAssetWeight(assetID string, weight valueobjects.Percen
 	}
 
 	if !found {
-		return ErrAssetNotFound
+		return NewAssetNotFoundError(assetID)
 	}
 
 	// 새 가중치 적용 시 총 가중치가 100%를 초과하는지 확인
@@ -101,7 +101,7 @@ func (p *Portfolio) RemoveAsset(assetID string) error {
 			return nil
 		}
 	}
-	return ErrAssetNotFound
+	return NewAssetNotFoundError(assetID)
 }
 
 // Validate 포트폴리오의 유효성을 검증합니다.
@@ -118,10 +118,9 @@ func (p *Portfolio) Validate() error {
 	return nil
 }
 
-// Error 정의
+// ErrInvalidWeight Error 정의
 var (
 	ErrInvalidWeight = NewDomainError("invalid_weight", "자산 가중치의 총합이 100%를 초과할 수 없습니다")
-	ErrAssetNotFound = NewDomainError("asset_not_found", "자산을 찾을 수 없습니다")
 )
 
 // Error 도메인 에러를 나타냅니다.
