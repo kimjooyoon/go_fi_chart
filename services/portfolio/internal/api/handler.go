@@ -323,7 +323,7 @@ func (h *Handler) ListUserPortfolios(w http.ResponseWriter, r *http.Request) {
 	portfolios, err := h.portfolioRepo.FindByUserID(r.Context(), userID)
 	if err != nil {
 		h.logger.Error("failed to find portfolios", "error", err)
-		if errors.Is(err, domain.ErrPortfolioNotFound) {
+		if domain.IsPortfolioNotFound(err) {
 			http.Error(w, "portfolios not found", http.StatusNotFound)
 			return
 		}

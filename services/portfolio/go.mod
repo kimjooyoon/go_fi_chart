@@ -3,6 +3,7 @@ module github.com/aske/go_fi_chart/services/portfolio
 go 1.24.0
 
 require (
+	github.com/aske/go_fi_chart/internal/common/errors v0.0.0
 	github.com/aske/go_fi_chart/pkg v0.0.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
@@ -18,3 +19,5 @@ require (
 )
 
 replace github.com/aske/go_fi_chart/pkg => ../../pkg
+
+replace github.com/aske/go_fi_chart/internal/common/errors => ../../internal/common/errors
